@@ -79,6 +79,7 @@ export default function LandPage() {
   const [selectedLayerKey, setSelectedLayerKey] = useState("phh2o");
   const [data, setData] = useState<LandIntelligence | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tileError, setTileError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const requestSequence = useRef(0);
   const selectedLayer = useMemo(
@@ -122,6 +123,10 @@ export default function LandPage() {
 
   const wmsUrl = `https://maps.isric.org/mapserv?map=/map/${selectedLayer.mapFile}.map`;
   const legendUrl = `${wmsUrl}&version=1.3.0&service=WMS&request=GetLegendGraphic&sld_version=1.1.0&layer=${selectedLayer.layer}&format=image/png&STYLE=default`;
+
+  useEffect(() => {
+    setTileError(null);
+  }, [selectedLayer.layer]);
 
   return (
     <main>
@@ -170,6 +175,12 @@ export default function LandPage() {
                 transparent
                 opacity={0.62}
                 version="1.3.0"
+                zIndex={250}
+                eventHandlers={{
+                  tileerror: () => {
+                    setTileError("The SoilGrids overlay could not be loaded. The base map remains available; try the layer again shortly.");
+                  },
+                }}
                 attribution='SoilGrids 250 m &copy; <a href="https://www.isric.org/explore/soilgrids">ISRIC - World Soil Information</a>'
               />
               <LandMapController latitude={latitude} longitude={longitude} onSelect={selectLocation} />
@@ -184,6 +195,7 @@ export default function LandPage() {
                 <img src={legendUrl} alt={`${selectedLayer.name} SoilGrids color legend`} />
               </details>
             </div>
+            {tileError && <div className="state-message error soil-tile-error">{tileError}</div>}
             <p className="responsible-note">This layer shows a 250 m modelled pattern at 0-5 cm depth. It can identify variation worth investigating, but it cannot diagnose the selected farm point or replace sampling.</p>
           </section>
           <aside className="soil-layer-list panel">
