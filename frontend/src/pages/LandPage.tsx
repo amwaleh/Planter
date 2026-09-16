@@ -25,17 +25,20 @@ interface SoilLayer {
   mapFile: string;
   layer: string;
   gradientLow: string;
+  gradientMiddle: string;
   gradientHigh: string;
+  gradient: string;
+  gradientSummary: string;
 }
 
 const soilLayers: SoilLayer[] = [
-  { key: "phh2o", name: "Soil pH", description: "Acidity or alkalinity in the top 5 cm", unit: "pH x 10", mapFile: "phh2o", layer: "phh2o_0-5cm_mean", gradientLow: "More acidic", gradientHigh: "More alkaline" },
-  { key: "clay", name: "Clay content", description: "Modelled clay fraction in the top 5 cm", unit: "g/kg", mapFile: "clay", layer: "clay_0-5cm_mean", gradientLow: "Less clay", gradientHigh: "More clay" },
-  { key: "sand", name: "Sand content", description: "Modelled sand fraction in the top 5 cm", unit: "g/kg", mapFile: "sand", layer: "sand_0-5cm_mean", gradientLow: "Less sand", gradientHigh: "More sand" },
-  { key: "soc", name: "Organic carbon", description: "Modelled soil organic carbon in the top 5 cm", unit: "dg/kg", mapFile: "soc", layer: "soc_0-5cm_mean", gradientLow: "Lower carbon", gradientHigh: "Higher carbon" },
-  { key: "nitrogen", name: "Total nitrogen", description: "Modelled total nitrogen in the top 5 cm", unit: "cg/kg", mapFile: "nitrogen", layer: "nitrogen_0-5cm_mean", gradientLow: "Lower nitrogen", gradientHigh: "Higher nitrogen" },
-  { key: "cec", name: "Cation exchange capacity", description: "Modelled nutrient-holding capacity in the top 5 cm", unit: "mmol(c)/kg", mapFile: "cec", layer: "cec_0-5cm_mean", gradientLow: "Lower capacity", gradientHigh: "Higher capacity" },
-  { key: "bdod", name: "Bulk density", description: "Modelled density of the fine-earth fraction in the top 5 cm", unit: "cg/cm3", mapFile: "bdod", layer: "bdod_0-5cm_mean", gradientLow: "Lower density", gradientHigh: "Higher density" },
+  { key: "phh2o", name: "Soil pH", description: "Acidity or alkalinity in the top 5 cm", unit: "pH x 10", mapFile: "phh2o", layer: "phh2o_0-5cm_mean", gradientLow: "More acidic", gradientMiddle: "Mid-range pH", gradientHigh: "More alkaline", gradient: "linear-gradient(90deg, #f4f87c, #b2e382, #80cd75, #2a9945, #5ddce5)", gradientSummary: "Yellow moves through green to cyan as the modelled pH increases." },
+  { key: "clay", name: "Clay content", description: "Modelled clay fraction in the top 5 cm", unit: "g/kg", mapFile: "clay", layer: "clay_0-5cm_mean", gradientLow: "Less clay", gradientMiddle: "Moderate clay", gradientHigh: "More clay", gradient: "linear-gradient(90deg, #f6e6d5, #d8a775, #cfa881, #b99471, #a28261)", gradientSummary: "Pale earth tones deepen to brown as modelled clay content increases." },
+  { key: "sand", name: "Sand content", description: "Modelled sand fraction in the top 5 cm", unit: "g/kg", mapFile: "sand", layer: "sand_0-5cm_mean", gradientLow: "Less sand", gradientMiddle: "Moderate sand", gradientHigh: "More sand", gradient: "linear-gradient(90deg, #f6e6d5, #d8a775, #cfa881, #b99471, #a28261)", gradientSummary: "Pale sand tones deepen to brown as modelled sand content increases." },
+  { key: "soc", name: "Organic carbon", description: "Modelled soil organic carbon in the top 5 cm", unit: "dg/kg", mapFile: "soc", layer: "soc_0-5cm_mean", gradientLow: "Lower carbon", gradientMiddle: "Moderate carbon", gradientHigh: "Higher carbon", gradient: "linear-gradient(90deg, #fcfafa, #e6dedb, #b69d95, #b59b94, #a07e75)", gradientSummary: "Off-white changes through taupe to dark earth as modelled organic carbon increases." },
+  { key: "nitrogen", name: "Total nitrogen", description: "Modelled total nitrogen in the top 5 cm", unit: "cg/kg", mapFile: "nitrogen", layer: "nitrogen_0-5cm_mean", gradientLow: "Lower nitrogen", gradientMiddle: "Moderate nitrogen", gradientHigh: "Higher nitrogen", gradient: "linear-gradient(90deg, #f9fcf8, #cfedc9, #aadba9, #70b786, #53a773)", gradientSummary: "Very pale green deepens to leaf green as modelled nitrogen increases." },
+  { key: "cec", name: "Cation exchange capacity", description: "Modelled nutrient-holding capacity in the top 5 cm", unit: "mmol(c)/kg", mapFile: "cec", layer: "cec_0-5cm_mean", gradientLow: "Lower capacity", gradientMiddle: "Moderate capacity", gradientHigh: "Higher capacity", gradient: "linear-gradient(90deg, #f2fafc, #b9d1e6, #b3bbda, #af8ec4, #db63d6)", gradientSummary: "Pale blue changes through violet to magenta as modelled nutrient-holding capacity increases." },
+  { key: "bdod", name: "Bulk density", description: "Modelled density of the fine-earth fraction in the top 5 cm", unit: "cg/cm3", mapFile: "bdod", layer: "bdod_0-5cm_mean", gradientLow: "Lower density", gradientMiddle: "Moderate density", gradientHigh: "Higher density", gradient: "linear-gradient(90deg, #f4faef, #bfe6c1, #a9ded7, #82c1db, #5999c7)", gradientSummary: "Pale green changes through teal to blue as modelled bulk density increases." },
 ];
 
 const markerIcon = L.divIcon({
@@ -195,13 +198,13 @@ export default function LandPage() {
             <figure className="soil-color-legend">
               <figcaption>
                 <strong>{selectedLayer.name} color guide</strong>
-                <span>Yellow shows lower modelled values, green shows the middle range, and blue shows higher values.</span>
+                <span>{selectedLayer.gradientSummary}</span>
               </figcaption>
               <div className="soil-gradient-scale" role="img" aria-label={`${selectedLayer.gradientLow} to ${selectedLayer.gradientHigh}`}>
-                <div className="soil-gradient-bar" />
+                <div className="soil-gradient-bar" style={{ background: selectedLayer.gradient }} />
                 <div className="soil-gradient-labels">
                   <span><strong>{selectedLayer.gradientLow}</strong><small>Lower value</small></span>
-                  <span><strong>Middle range</strong><small>Green</small></span>
+                  <span><strong>{selectedLayer.gradientMiddle}</strong><small>Middle range</small></span>
                   <span><strong>{selectedLayer.gradientHigh}</strong><small>Higher value</small></span>
                 </div>
                 <p>SoilGrids units: {selectedLayer.unit}. Use the colors to compare broad patterns, not as an exact reading for the selected point.</p>

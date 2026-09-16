@@ -764,15 +764,6 @@ nav a {
   height: 22px;
   border: 1px solid rgb(25 78 54 / 18%);
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    #eff225 0%,
-    #cde72d 20%,
-    #77cf3e 40%,
-    #24a844 60%,
-    #168f55 75%,
-    #21c4d3 100%
-  );
 }
 
 .soil-gradient-labels {
