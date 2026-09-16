@@ -2,28 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import {
   CalendarDays,
-  BookOpen,
   ChevronRight,
   CloudRain,
   Crosshair,
   Droplets,
-  Leaf,
   Link2,
   LoaderCircle,
   MapPin,
   Mountain,
-  Plus,
   Search,
-  Save,
   ShieldAlert,
   Sparkles,
-  SquareDashed,
   ThermometerSun,
 } from "lucide-react";
 import {
   MapContainer,
   Marker,
-  Polygon,
   TileLayer,
   useMap,
   useMapEvents,
@@ -38,25 +32,13 @@ import {
   YAxis,
 } from "recharts";
 import {
-  createCropRule,
-  createProject,
-  getCropRules,
   getCrops,
   getFarmReport,
-  getProjects,
   resolveMapLink,
   searchLocations,
 } from "./api";
-import type {
-  Coordinate,
-  CropAssessment,
-  CropRule,
-  CropRuleInput,
-  FarmProject,
-  FarmReport,
-  FarmSection,
-  LocationMatch,
-} from "./types";
+import { SiteFooter, SiteHeader } from "./components/SiteChrome";
+import type { CropAssessment, FarmReport, LocationMatch } from "./types";
 
 const fallbackCrops = ["onion", "maize", "beans", "potato", "sorghum", "tomato"];
 const defaultLocation = { latitude: -0.7167, longitude: 36.4333 };
@@ -68,22 +50,14 @@ const markerIcon = L.divIcon({
   iconAnchor: [14, 14],
 });
 
-type DrawMode = "location" | "farm" | "section";
-
-function FarmMapEditor({
+function MapPicker({
   latitude,
   longitude,
-  farmBoundary,
-  sectionDraft,
-  sections,
-  onMapClick,
+  onChange,
 }: {
   latitude: number;
   longitude: number;
-  farmBoundary: Coordinate[];
-  sectionDraft: Coordinate[];
-  sections: FarmSection[];
-  onMapClick: (latitude: number, longitude: number) => void;
+  onChange: (latitude: number, longitude: number) => void;
 }) {
   const map = useMap();
   useEffect(() => {
@@ -91,39 +65,10 @@ function FarmMapEditor({
   }, [latitude, longitude, map]);
   useMapEvents({
     click(event) {
-      onMapClick(event.latlng.lat, event.latlng.lng);
+      onChange(event.latlng.lat, event.latlng.lng);
     },
   });
-  const positions = (points: Coordinate[]) =>
-    points.map((point) => [point.latitude, point.longitude] as [number, number]);
-
-  return (
-    <>
-      <Marker position={[latitude, longitude]} icon={markerIcon} />
-      {farmBoundary.length >= 2 && (
-        <Polygon
-          positions={positions(farmBoundary)}
-          pathOptions={{ color: "#173f2a", fillColor: "#4f7b52", fillOpacity: 0.12 }}
-        />
-      )}
-      {sections.map((section, index) => (
-        <Polygon
-          key={`${section.name}-${index}`}
-          positions={positions(section.boundary)}
-          pathOptions={{
-            color: index % 2 === 0 ? "#e8b449" : "#72523f",
-            fillOpacity: 0.28,
-          }}
-        />
-      ))}
-      {sectionDraft.length >= 2 && (
-        <Polygon
-          positions={positions(sectionDraft)}
-          pathOptions={{ color: "#d36d3c", dashArray: "7 5", fillOpacity: 0.18 }}
-        />
-      )}
-    </>
-  );
+  return <Marker position={[latitude, longitude]} icon={markerIcon} />;
 }
 
 function MetricCard({
@@ -222,18 +167,6 @@ export default function App() {
   const [report, setReport] = useState<FarmReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [drawMode, setDrawMode] = useState<DrawMode>("location");
-  const [farmBoundary, setFarmBoundary] = useState<Coordinate[]>([]);
-  const [sectionDraft, setSectionDraft] = useState<Coordinate[]>([]);
-  const [sections, setSections] = useState<FarmSection[]>([]);
-  const [projectName, setProjectName] = useState("");
-  const [sectionName, setSectionName] = useState("");
-  const [sectionActivity, setSectionActivity] = useState("");
-  const [sectionCrop, setSectionCrop] = useState("");
-  const [projects, setProjects] = useState<FarmProject[]>([]);
-  const [projectMessage, setProjectMessage] = useState<string | null>(null);
-  const [cropRules, setCropRules] = useState<CropRule[]>([]);
-  const [cropRuleMessage, setCropRuleMessage] = useState<string | null>(null);
 
   const loadReport = useCallback(async () => {
     setLoading(true);
@@ -259,8 +192,6 @@ export default function App() {
     void getCrops()
       .then(setCropOptions)
       .catch(() => setCropOptions(fallbackCrops));
-    void getCropRules().then(setCropRules).catch(() => setCropRules([]));
-    void getProjects().then(setProjects).catch(() => setProjects([]));
   }, []);
 
   const updateLocation = (nextLatitude: number, nextLongitude: number) => {
@@ -337,137 +268,11 @@ export default function App() {
     }
   };
 
-  const handleMapClick = (nextLatitude: number, nextLongitude: number) => {
-    const point = { latitude: nextLatitude, longitude: nextLongitude };
-    if (drawMode === "farm") {
-      setFarmBoundary((current) => [...current, point]);
-      return;
-    }
-    if (drawMode === "section") {
-      setSectionDraft((current) => [...current, point]);
-      return;
-    }
-    updateLocation(nextLatitude, nextLongitude);
-  };
-
-  const addSection = () => {
-    if (sectionDraft.length < 3 || !sectionName.trim() || !sectionActivity.trim()) {
-      setProjectMessage(
-        "Draw at least three section points and enter its name and activity.",
-      );
-      return;
-    }
-    setSections((current) => [
-      ...current,
-      {
-        name: sectionName.trim(),
-        activity: sectionActivity.trim(),
-        crop: sectionCrop.trim() || null,
-        boundary: sectionDraft,
-      },
-    ]);
-    setSectionDraft([]);
-    setSectionName("");
-    setSectionActivity("");
-    setSectionCrop("");
-    setDrawMode("location");
-    setProjectMessage("Farm section added. Save the project to persist it.");
-  };
-
-  const saveProject = async () => {
-    if (!projectName.trim() || farmBoundary.length < 3) {
-      setProjectMessage(
-        "Enter a project name and draw at least three farm-boundary points.",
-      );
-      return;
-    }
-    try {
-      const saved = await createProject({
-        name: projectName.trim(),
-        center_latitude: latitude,
-        center_longitude: longitude,
-        boundary: farmBoundary,
-        sections,
-      });
-      setProjects((current) => [saved, ...current]);
-      setProjectMessage(`Saved ${saved.name} with ${saved.sections.length} sections.`);
-    } catch (saveError) {
-      setProjectMessage(
-        saveError instanceof Error ? saveError.message : "The project could not be saved.",
-      );
-    }
-  };
-
-  const loadProject = (project: FarmProject) => {
-    setProjectName(project.name);
-    setFarmBoundary(project.boundary);
-    setSections(project.sections);
-    setSectionDraft([]);
-    setDrawMode("location");
-    updateLocation(project.center_latitude, project.center_longitude);
-    setProjectMessage(`Loaded ${project.name}.`);
-  };
-
-  const submitCropRule = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const numeric = (name: string) => Number(form.get(name));
-    const payload: CropRuleInput = {
-      name: String(form.get("name") ?? ""),
-      temperature_min_c: numeric("temperature_min_c"),
-      temperature_max_c: numeric("temperature_max_c"),
-      monthly_rainfall_min_mm: numeric("monthly_rainfall_min_mm"),
-      monthly_rainfall_max_mm: numeric("monthly_rainfall_max_mm"),
-      elevation_min_m: numeric("elevation_min_m"),
-      elevation_max_m: numeric("elevation_max_m"),
-      duration_min_days: numeric("duration_min_days"),
-      duration_max_days: numeric("duration_max_days"),
-      planting_guidance: String(form.get("planting_guidance") ?? ""),
-      sensitivities: String(form.get("sensitivities") ?? "")
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      source: String(form.get("source") ?? ""),
-    };
-    try {
-      const saved = await createCropRule(payload);
-      setCropRules((current) =>
-        [...current, saved].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setCropOptions((current) =>
-        [...new Set([...current, saved.name])].sort(),
-      );
-      setCropRuleMessage(`${saved.name} is now available in the farm analyzer.`);
-      event.currentTarget.reset();
-    } catch (ruleError) {
-      setCropRuleMessage(
-        ruleError instanceof Error ? ruleError.message : "The crop rule could not be saved.",
-      );
-    }
-  };
-
   const bestAlternative = useMemo(() => report?.alternatives[0], [report]);
 
   return (
     <main>
-      <header className="site-header">
-        <a className="brand" href="#" aria-label="Planter home">
-          <span className="brand-mark">
-            <Leaf size={21} />
-          </span>
-          <span>Planter</span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a href="#overview">Farm overview</a>
-          <a href="#farm-projects">My farms</a>
-          <a href="#advisor">Crop advisor</a>
-          <a href="#crop-rules">Crop rules</a>
-          <a href="#sources">Evidence</a>
-        </nav>
-        <button className="language-button" type="button">
-          EN <span aria-hidden="true">/</span> SW
-        </button>
-      </header>
+      <SiteHeader />
 
       <section className="hero">
         <div className="hero-copy">
@@ -496,13 +301,10 @@ export default function App() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <FarmMapEditor
+            <MapPicker
               latitude={latitude}
               longitude={longitude}
-              farmBoundary={farmBoundary}
-              sectionDraft={sectionDraft}
-              sections={sections}
-              onMapClick={handleMapClick}
+              onChange={updateLocation}
             />
           </MapContainer>
           <form className="map-search" onSubmit={searchForPlace}>
@@ -537,29 +339,6 @@ export default function App() {
             <Crosshair size={18} />
             Use my location
           </button>
-          <div className="farm-map-tools" aria-label="Farm drawing tools">
-            <button
-              className={drawMode === "location" ? "active" : ""}
-              type="button"
-              onClick={() => setDrawMode("location")}
-            >
-              <MapPin size={16} /> Pin
-            </button>
-            <button
-              className={drawMode === "farm" ? "active" : ""}
-              type="button"
-              onClick={() => setDrawMode("farm")}
-            >
-              <SquareDashed size={16} /> Farm boundary
-            </button>
-            <button
-              className={drawMode === "section" ? "active" : ""}
-              type="button"
-              onClick={() => setDrawMode("section")}
-            >
-              <Plus size={16} /> Section
-            </button>
-          </div>
         </div>
       </section>
 
@@ -590,112 +369,6 @@ export default function App() {
             )}
           </button>
         </form>
-        <section className="project-builder panel" id="farm-projects">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Farm projects</p>
-              <h2>Map and save your farm plan</h2>
-            </div>
-            <Save size={24} />
-          </div>
-          <p className="panel-intro">
-            Select <strong>Farm boundary</strong>, then click around the outside
-            of the farm. Use <strong>Section</strong> to draw portions for
-            different activities.
-          </p>
-          <div className="project-grid">
-            <div className="project-form">
-              <label>
-                Project name
-                <input
-                  value={projectName}
-                  onChange={(event) => setProjectName(event.target.value)}
-                  placeholder="e.g. Mwangaza Farm"
-                />
-              </label>
-              <div className="boundary-summary">
-                <span>{farmBoundary.length} farm boundary points</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFarmBoundary([]);
-                    setSections([]);
-                    setSectionDraft([]);
-                  }}
-                >
-                  Clear map
-                </button>
-              </div>
-              <div className="section-editor">
-                <h3>Add a farm section</h3>
-                <label>
-                  Section name
-                  <input
-                    value={sectionName}
-                    onChange={(event) => setSectionName(event.target.value)}
-                    placeholder="e.g. North field"
-                  />
-                </label>
-                <label>
-                  Planned activity
-                  <input
-                    value={sectionActivity}
-                    onChange={(event) => setSectionActivity(event.target.value)}
-                    placeholder="e.g. Planting and drip irrigation"
-                  />
-                </label>
-                <label>
-                  Crop or use
-                  <input
-                    list="crop-options"
-                    value={sectionCrop}
-                    onChange={(event) => setSectionCrop(event.target.value)}
-                    placeholder="e.g. pineapple, pasture, poultry"
-                  />
-                </label>
-                <div className="boundary-summary">
-                  <span>{sectionDraft.length} section points</span>
-                  <button type="button" onClick={addSection}>
-                    Add section
-                  </button>
-                </div>
-              </div>
-              <button className="primary-button" type="button" onClick={saveProject}>
-                Save farm project
-              </button>
-              {projectMessage && <p className="form-message">{projectMessage}</p>}
-            </div>
-            <div className="saved-projects">
-              <h3>Saved farms</h3>
-              {projects.length === 0 && <p>No farms saved yet.</p>}
-              {projects.map((project) => (
-                <button
-                  type="button"
-                  key={project.id}
-                  onClick={() => loadProject(project)}
-                >
-                  <strong>{project.name}</strong>
-                  <span>
-                    {project.sections.length} sections ·{" "}
-                    {new Date(project.updated_at).toLocaleDateString()}
-                  </span>
-                </button>
-              ))}
-              {sections.length > 0 && (
-                <div className="section-list">
-                  <h3>Current sections</h3>
-                  {sections.map((section, index) => (
-                    <article key={`${section.name}-${index}`}>
-                      <strong>{section.name}</strong>
-                      <span>{section.activity}</span>
-                      {section.crop && <small>{section.crop}</small>}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
         <form className="controls" onSubmit={submitCoordinates}>
           <label>
             Latitude
@@ -888,88 +561,9 @@ export default function App() {
             </section>
           </>
         )}
-        <section className="crop-catalog panel" id="crop-rules">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Crop knowledge</p>
-              <h2>Available crop rules</h2>
-            </div>
-            <BookOpen size={24} />
-          </div>
-          <p className="panel-intro">
-            These rules drive the analyzer. Custom rules require a named source
-            so their assumptions remain visible.
-          </p>
-          <div className="crop-rule-grid">
-            {cropRules.map((rule) => (
-              <article key={rule.key}>
-                <div>
-                  <strong>{rule.name}</strong>
-                  {rule.custom && <span className="custom-badge">Custom</span>}
-                </div>
-                <p>
-                  {rule.temperature_min_c}-{rule.temperature_max_c} C ·{" "}
-                  {rule.monthly_rainfall_min_mm}-{rule.monthly_rainfall_max_mm} mm/month
-                </p>
-                <span>
-                  {rule.elevation_min_m}-{rule.elevation_max_m} m ·{" "}
-                  {rule.duration_min_days}-{rule.duration_max_days} days
-                </span>
-                <small>{rule.source}</small>
-              </article>
-            ))}
-          </div>
-          <details className="add-crop-rule">
-            <summary>Add another crop rule</summary>
-            <form onSubmit={submitCropRule}>
-              <label>
-                Crop name
-                <input name="name" placeholder="e.g. passion fruit" required />
-              </label>
-              <label>
-                Source
-                <input
-                  name="source"
-                  placeholder="Publication, extension guide, or expert reference"
-                  required
-                />
-              </label>
-              <div className="rule-range">
-                <label>Min temperature (C)<input name="temperature_min_c" type="number" step="0.1" required /></label>
-                <label>Max temperature (C)<input name="temperature_max_c" type="number" step="0.1" required /></label>
-                <label>Min rainfall (mm/month)<input name="monthly_rainfall_min_mm" type="number" step="0.1" required /></label>
-                <label>Max rainfall (mm/month)<input name="monthly_rainfall_max_mm" type="number" step="0.1" required /></label>
-                <label>Min elevation (m)<input name="elevation_min_m" type="number" step="1" required /></label>
-                <label>Max elevation (m)<input name="elevation_max_m" type="number" step="1" required /></label>
-                <label>Min duration (days)<input name="duration_min_days" type="number" required /></label>
-                <label>Max duration (days)<input name="duration_max_days" type="number" required /></label>
-              </div>
-              <label>
-                Planting guidance
-                <textarea name="planting_guidance" rows={3} required />
-              </label>
-              <label>
-                Main risks, one per line
-                <textarea name="sensitivities" rows={3} required />
-              </label>
-              <button className="primary-button" type="submit">
-                Add crop rule
-              </button>
-              {cropRuleMessage && <p className="form-message">{cropRuleMessage}</p>}
-            </form>
-          </details>
-        </section>
       </section>
 
-      <footer>
-        <div className="brand">
-          <span className="brand-mark">
-            <Leaf size={19} />
-          </span>
-          Planter
-        </div>
-        <p>Decision support for Kenyan farms. Verify critical decisions with local experts.</p>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

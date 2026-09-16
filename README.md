@@ -33,6 +33,12 @@ npm run dev
 
 Open `http://localhost:5173`. The frontend expects the API at `http://localhost:8000` by default. Override it with `VITE_API_BASE_URL`.
 
+Focused application pages:
+
+- `/` — farm location and intelligence dashboard
+- `/farm-projects` — farm boundary, section, activity, and saved-project planning
+- `/crop-knowledge` — available crop rules and sourced custom-rule creation
+
 ## Current prototype scope
 
 - Pick a Kenyan coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
