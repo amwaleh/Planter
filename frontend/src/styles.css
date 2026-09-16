@@ -281,10 +281,167 @@ nav a {
   font-weight: 700;
 }
 
+.farm-map-tools {
+  position: absolute;
+  z-index: 500;
+  bottom: 18px;
+  left: 18px;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 13px;
+  background: rgba(255, 254, 250, 0.95);
+  box-shadow: 0 8px 24px rgba(23, 63, 42, 0.16);
+}
+
+.farm-map-tools button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--forest);
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.farm-map-tools button.active {
+  color: white;
+  background: var(--forest);
+}
+
 .workspace {
   margin-top: 60px;
   padding: 74px max(20px, calc((100vw - 1180px) / 2)) 90px;
   background: #edf0e7;
+}
+
+.panel-intro {
+  max-width: 760px;
+  margin: 12px 0 24px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.project-builder {
+  margin-bottom: 14px;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 28px;
+}
+
+.project-form,
+.section-editor,
+.add-crop-rule form {
+  display: grid;
+  gap: 13px;
+}
+
+.project-form label,
+.section-editor label,
+.add-crop-rule label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.project-form input,
+.add-crop-rule input,
+.add-crop-rule textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--forest);
+  background: white;
+}
+
+.section-editor {
+  margin: 4px 0;
+  padding: 16px;
+  border-radius: 13px;
+  background: #f2f3e9;
+}
+
+.section-editor h3,
+.saved-projects h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.boundary-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.boundary-summary button {
+  border: 0;
+  color: var(--leaf);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.saved-projects {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.saved-projects > button {
+  display: grid;
+  gap: 4px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  text-align: left;
+  color: var(--forest);
+  background: white;
+  cursor: pointer;
+}
+
+.saved-projects > button span,
+.section-list span,
+.section-list small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.section-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.section-list article {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border-left: 4px solid var(--maize);
+  border-radius: 7px;
+  background: #f7f1df;
+}
+
+.form-message {
+  margin: 0;
+  color: var(--leaf);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .map-link-form {
@@ -724,6 +881,76 @@ nav a {
   margin-top: 16px;
 }
 
+.crop-catalog {
+  margin-top: 16px;
+}
+
+.crop-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.crop-rule-grid article {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfbf5;
+}
+
+.crop-rule-grid article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-transform: capitalize;
+}
+
+.crop-rule-grid p,
+.crop-rule-grid span,
+.crop-rule-grid small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.custom-badge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--forest) !important;
+  background: var(--lime);
+  font-weight: 800;
+}
+
+.add-crop-rule {
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #f7f8f1;
+}
+
+.add-crop-rule summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.add-crop-rule form {
+  margin-top: 18px;
+}
+
+.rule-range {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
 .source-table {
   display: grid;
   margin-top: 20px;
@@ -792,6 +1019,18 @@ footer p {
     grid-template-columns: 1fr;
   }
 
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crop-rule-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rule-range {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .controls {
     grid-template-columns: 1fr 1fr;
   }
@@ -821,6 +1060,12 @@ footer p {
     height: 390px;
   }
 
+  .farm-map-tools {
+    right: 18px;
+    bottom: 72px;
+    flex-wrap: wrap;
+  }
+
   .controls,
   .metrics-grid,
   .assessment-grid {
@@ -847,6 +1092,11 @@ footer p {
   .source-table article {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .crop-rule-grid,
+  .rule-range {
+    grid-template-columns: 1fr;
   }
 
   footer {

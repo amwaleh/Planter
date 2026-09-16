@@ -36,8 +36,10 @@ Open `http://localhost:5173`. The frontend expects the API at `http://localhost:
 ## Current prototype scope
 
 - Pick a Kenyan coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
+- Draw an outer farm boundary, divide it into named activity/crop sections, and save or reload the farm project.
 - Load forecast weather, a responsible 21-day outlook, historical monthly climate, and elevation.
 - Search a catalog of 20+ Kenya-relevant crops, including common aliases and spelling correction, and evaluate them with a documented rule-based method.
+- Inspect the crop rules behind recommendations and add sourced custom rules for additional crops.
 - Inspect reasons, risks, confidence, timestamps, and sources.
 - Show unavailable datasets honestly instead of substituting invented values.
 

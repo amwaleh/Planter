@@ -20,6 +20,19 @@ def test_local_review_origin_is_allowed() -> None:
     )
 
 
+def test_local_review_origin_can_post() -> None:
+    response = client.options(
+        "/api/v1/projects",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "POST" in response.headers["access-control-allow-methods"]
+
+
 def test_map_link_endpoint_returns_resolved_coordinates() -> None:
     resolution = MapLinkResolution(
         latitude=-3.43486,

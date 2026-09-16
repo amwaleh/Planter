@@ -70,3 +70,48 @@ export interface MapLinkResolution {
   longitude: number;
   resolved_url: string;
 }
+
+export interface Coordinate {
+  latitude: number;
+  longitude: number;
+}
+
+export interface FarmSection {
+  name: string;
+  activity: string;
+  crop: string | null;
+  boundary: Coordinate[];
+}
+
+export interface FarmProjectInput {
+  name: string;
+  center_latitude: number;
+  center_longitude: number;
+  boundary: Coordinate[];
+  sections: FarmSection[];
+}
+
+export interface FarmProject extends FarmProjectInput {
+  id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CropRule {
+  key: string;
+  name: string;
+  temperature_min_c: number;
+  temperature_max_c: number;
+  monthly_rainfall_min_mm: number;
+  monthly_rainfall_max_mm: number;
+  elevation_min_m: number;
+  elevation_max_m: number;
+  duration_min_days: number;
+  duration_max_days: number;
+  planting_guidance: string;
+  sensitivities: string[];
+  source: string;
+  custom: boolean;
+}
+
+export type CropRuleInput = Omit<CropRule, "key" | "custom">;

@@ -128,6 +128,11 @@ CROP_RULES = {
         "Use a cool growing window with adequate moisture and avoid persistent wetness near harvest.",
         ("High temperatures reduce flowering and pod fill.", "Wet foliage can increase disease pressure."),
     ),
+    "pineapple": CropRule(
+        "pineapple", (20, 32), (60, 140), (0, 1800), (450, 720),
+        "Establish healthy planting material when dependable moisture is available in a warm, well-drained field.",
+        ("Waterlogging can cause root and heart rot.", "Cold conditions slow growth and fruit development."),
+    ),
     "rice": CropRule(
         "rice", (20, 35), (100, 220), (0, 1800), (100, 180),
         "Use only where a suitable production system and reliable water-management plan are established.",
@@ -175,6 +180,7 @@ CROP_ALIASES = {
     "green grams": "green_gram",
     "onions": "onion",
     "potatoes": "potato",
+    "pineapples": "pineapple",
     "sweet potatoes": "sweet_potato",
     "tomatoes": "tomato",
 }

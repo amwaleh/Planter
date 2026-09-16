@@ -32,6 +32,8 @@ Kenya is the MVP geography. Provider interfaces, normalized evidence, localizati
 - Current GPS, map pin, coordinate entry, Kenyan place-name search, and Google Maps share-link coordinate extraction.
 - Coordinates are canonical.
 - Resolve county, sub-county, ward, elevation, slope, and agro-ecological context only when supported by authoritative data.
+- Allow users to sketch a farm boundary and internal management sections, name each section, assign an activity or crop, and persist the result as a reusable farm project.
+- Treat drawn boundaries as planning geometry, not surveyed or legal cadastral boundaries.
 
 ### Weather and climate
 
@@ -53,6 +55,7 @@ Kenya is the MVP geography. Provider interfaces, normalized evidence, localizati
 
 - Flows for “Can I grow this?” and “What should I grow?”
 - Searchable crop catalog with common-name aliases and conservative spelling correction; unsupported crops must not receive invented suitability rules.
+- Let users inspect rule assumptions and add persistent custom crop rules only when required ranges, limitations, and a source are supplied.
 - Explicit scoring factors: temperature, rainfall, humidity, soil, elevation, terrain, water need, season length, and authoritative local guidance.
 - Return category, component scores, reasons, risks, confidence, planting window, expected harvest window, and alternatives.
 - Do not recommend fertilizer dosage without an authoritative source and adequate soil-test evidence.

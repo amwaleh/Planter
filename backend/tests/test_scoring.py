@@ -58,6 +58,7 @@ def test_missing_elevation_reduces_confidence() -> None:
 def test_crop_catalog_contains_broad_kenyan_selection() -> None:
     assert len(CROP_RULES) >= 20
     assert {"maize", "cassava", "coffee", "tea", "green_gram"} <= set(CROP_RULES)
+    assert resolve_crop_name("pineapples")[:2] == ("pineapple", True)
 
 
 def test_crop_name_autocorrects_spelling_and_aliases() -> None:
