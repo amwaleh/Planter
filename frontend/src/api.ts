@@ -85,6 +85,22 @@ export async function createProject(
   return response.json() as Promise<FarmProject>;
 }
 
+export async function updateProject(
+  projectId: string,
+  project: FarmProjectInput,
+): Promise<FarmProject> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(project),
+  });
+  if (!response.ok) {
+    const payload = (await response.json()) as { detail?: string };
+    throw new Error(payload.detail ?? "The farm project could not be updated.");
+  }
+  return response.json() as Promise<FarmProject>;
+}
+
 export async function getCropRules(): Promise<CropRule[]> {
   const response = await fetch(`${API_BASE_URL}/api/v1/crop-rules`);
   if (!response.ok) throw new Error("Crop rules could not be loaded.");

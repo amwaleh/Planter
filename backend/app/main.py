@@ -42,6 +42,7 @@ from .storage import (
     list_farm_projects,
     save_crop_rule,
     save_farm_project,
+    update_farm_project,
     get_crop_image,
     save_crop_image,
 )
@@ -65,7 +66,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
 )
 provider = OpenMeteoProvider()
@@ -294,6 +295,17 @@ async def projects() -> list[FarmProject]:
 @app.post("/api/v1/projects", response_model=FarmProject, status_code=201)
 async def create_project(payload: FarmProjectCreate) -> FarmProject:
     return save_farm_project(payload)
+
+
+@app.put("/api/v1/projects/{project_id}", response_model=FarmProject)
+async def update_project(
+    project_id: str,
+    payload: FarmProjectCreate,
+) -> FarmProject:
+    saved_project = update_farm_project(project_id, payload)
+    if saved_project is None:
+        raise HTTPException(status_code=404, detail="Farm project was not found.")
+    return saved_project
 
 
 @app.get("/api/v1/projects/{project_id}", response_model=FarmProject)

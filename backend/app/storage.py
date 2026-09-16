@@ -90,6 +90,40 @@ def save_farm_project(payload: FarmProjectCreate) -> FarmProject:
     return project
 
 
+def update_farm_project(project_id: str, payload: FarmProjectCreate) -> FarmProject | None:
+    with _connect() as connection:
+        existing = connection.execute(
+            "SELECT created_at FROM farm_projects WHERE id = ?",
+            (project_id,),
+        ).fetchone()
+        if existing is None:
+            return None
+        project = FarmProject(
+            id=project_id,
+            created_at=datetime.fromisoformat(existing["created_at"]),
+            updated_at=datetime.now(timezone.utc),
+            **payload.model_dump(),
+        )
+        connection.execute(
+            """
+            UPDATE farm_projects
+            SET name = ?, center_latitude = ?, center_longitude = ?,
+                boundary_json = ?, sections_json = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                project.name,
+                project.center_latitude,
+                project.center_longitude,
+                json.dumps([point.model_dump() for point in project.boundary]),
+                json.dumps([section.model_dump() for section in project.sections]),
+                project.updated_at.isoformat(),
+                project.id,
+            ),
+        )
+    return project
+
+
 def list_farm_projects() -> list[FarmProject]:
     with _connect() as connection:
         rows = connection.execute(

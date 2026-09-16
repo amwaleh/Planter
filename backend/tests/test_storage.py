@@ -41,6 +41,31 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
     assert loaded.name == "Demo farm"
     assert loaded.sections[0].activity == "Planting maize"
 
+    updated = storage.update_farm_project(
+        project.id,
+        FarmProjectCreate(
+            name="Demo farm updated",
+            center_latitude=-1.04,
+            center_longitude=36.05,
+            boundary=[*boundary, Coordinate(latitude=-1.1, longitude=36.0)],
+            sections=[
+                FarmSection(
+                    name="South plot",
+                    activity="Grazing rotation",
+                    crop="pasture",
+                    boundary=boundary,
+                )
+            ],
+        ),
+    )
+    assert updated is not None
+    reloaded = storage.get_farm_project(project.id)
+    assert reloaded is not None
+    assert reloaded.name == "Demo farm updated"
+    assert len(reloaded.boundary) == 4
+    assert reloaded.sections[0].name == "South plot"
+    assert reloaded.sections[0].activity == "Grazing rotation"
+
 
 def test_custom_crop_rule_round_trip(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(storage, "DATABASE_PATH", tmp_path / "planter.db")

@@ -1,6 +1,8 @@
+from pathlib import Path
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
+from app import storage
 from app.main import app
 from app.models import MapLinkResolution
 
@@ -31,6 +33,7 @@ def test_local_review_origin_can_post() -> None:
 
     assert response.status_code == 200
     assert "POST" in response.headers["access-control-allow-methods"]
+    assert "PUT" in response.headers["access-control-allow-methods"]
 
 
 def test_map_link_endpoint_returns_resolved_coordinates() -> None:
@@ -66,3 +69,64 @@ def test_assistant_does_not_substitute_unknown_crop() -> None:
     assert response.status_code == 200
     assert response.json()["supported_intent"] == "unsupported_crop"
     assert "No other crop was substituted." in response.json()["limitations"]
+
+
+def test_project_api_create_update_and_reload(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(storage, "DATABASE_PATH", tmp_path / "planter.db")
+    storage.initialize_storage()
+    boundary = [
+        {"latitude": -1.0, "longitude": 36.0},
+        {"latitude": -1.0, "longitude": 36.1},
+        {"latitude": -1.1, "longitude": 36.1},
+    ]
+    created = client.post(
+        "/api/v1/projects",
+        json={
+            "name": "API farm",
+            "center_latitude": -1.03,
+            "center_longitude": 36.04,
+            "boundary": boundary,
+            "sections": [
+                {
+                    "name": "North field",
+                    "activity": "Planting",
+                    "crop": "maize",
+                    "boundary": boundary,
+                }
+            ],
+        },
+    )
+    assert created.status_code == 201
+    project_id = created.json()["id"]
+
+    updated_boundary = [
+        *boundary,
+        {"latitude": -1.1, "longitude": 36.0},
+    ]
+    updated = client.put(
+        f"/api/v1/projects/{project_id}",
+        json={
+            "name": "API farm",
+            "center_latitude": -1.04,
+            "center_longitude": 36.05,
+            "boundary": updated_boundary,
+            "sections": [
+                {
+                    "name": "South field",
+                    "activity": "Drip-irrigated vegetables",
+                    "crop": "onion",
+                    "boundary": boundary,
+                }
+            ],
+        },
+    )
+    assert updated.status_code == 200
+
+    reloaded = client.get(f"/api/v1/projects/{project_id}")
+    assert reloaded.status_code == 200
+    assert reloaded.json()["boundary"] == updated_boundary
+    assert reloaded.json()["sections"][0]["name"] == "South field"
+    assert reloaded.json()["sections"][0]["activity"] == "Drip-irrigated vegetables"
