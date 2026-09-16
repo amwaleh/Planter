@@ -735,16 +735,34 @@ nav a {
   gap: 7px;
 }
 
-.soil-map-footer summary {
-  color: var(--leaf);
-  cursor: pointer;
-  font-weight: 800;
+.soil-color-legend {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin: 14px 0 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8faf6;
 }
 
-.soil-map-footer img {
+.soil-color-legend figcaption {
+  display: grid;
+  min-width: 170px;
+  gap: 4px;
+  color: var(--forest);
+}
+
+.soil-color-legend figcaption span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.soil-color-legend img {
   display: block;
-  max-height: 320px;
-  margin-top: 8px;
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: contain;
 }
 
 .responsible-note {
@@ -1845,6 +1863,10 @@ footer p {
   }
 
   .soil-map-footer {
+    display: grid;
+  }
+
+  .soil-color-legend {
     display: grid;
   }
 

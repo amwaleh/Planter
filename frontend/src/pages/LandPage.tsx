@@ -190,11 +190,18 @@ export default function LandPage() {
                 <MapPin size={16} />
                 <span>{latitude.toFixed(6)}, {longitude.toFixed(6)} {loading && "· loading location information..."}</span>
               </div>
-              <details>
-                <summary>Show map legend</summary>
-                <img src={legendUrl} alt={`${selectedLayer.name} SoilGrids color legend`} />
-              </details>
             </div>
+            <figure className="soil-color-legend">
+              <figcaption>
+                <strong>{selectedLayer.name} color guide</strong>
+                <span>Provider units: {selectedLayer.unit}</span>
+              </figcaption>
+              <img
+                key={selectedLayer.layer}
+                src={legendUrl}
+                alt={`${selectedLayer.name} SoilGrids color legend in ${selectedLayer.unit}`}
+              />
+            </figure>
             {tileError && <div className="state-message error soil-tile-error">{tileError}</div>}
             <p className="responsible-note">This layer shows a 250 m modelled pattern at 0-5 cm depth. It can identify variation worth investigating, but it cannot diagnose the selected farm point or replace sampling.</p>
           </section>
