@@ -31,6 +31,7 @@ from .models import (
     WaterIntelligence,
 )
 from .providers.location import NominatimLocationProvider
+from .providers.land import SoilGridsSoilProvider
 from .providers.open_meteo import OpenMeteoProvider
 from .providers.water import OpenStreetMapWaterProvider
 from .providers.wikimedia import WikimediaImageProvider
@@ -73,6 +74,7 @@ provider = OpenMeteoProvider()
 location_provider = NominatimLocationProvider()
 water_provider = OpenStreetMapWaterProvider()
 image_provider = WikimediaImageProvider()
+soil_provider = SoilGridsSoilProvider()
 
 
 @app.get("/health")
@@ -136,7 +138,8 @@ async def land_intelligence(
         elevation_m = await provider.fetch_elevation(latitude, longitude)
     except HTTPError:
         elevation_m = None
-    return build_land_intelligence(latitude, longitude, elevation_m)
+    soil = await soil_provider.profile(latitude, longitude)
+    return build_land_intelligence(latitude, longitude, elevation_m, soil=soil)
 
 
 @app.get("/api/v1/water-intelligence", response_model=WaterIntelligence)

@@ -9,6 +9,7 @@ from app.crop_catalog import list_crop_catalog, resolve_catalog_name
 from app.intelligence import answer_farm_question, build_land_intelligence
 from app.livestock import assess_livestock
 from app.models import ClimateMonth, CurrentWeather, RecentDay, SourceRecord
+from app.providers.land import SoilGridsSoilProvider
 from app.providers.open_meteo import CacheEntry, OpenMeteoData, OpenMeteoProvider
 from app.providers.water import _distance_km
 from app.service import classify_recent_conditions, compare_rainfall, create_farm_report
@@ -179,6 +180,21 @@ def test_land_intelligence_remains_available_without_elevation() -> None:
     assert report.terrain.elevation_m is None
     assert "unavailable" in report.terrain.terrain_class.lower()
     assert report.soil.status == "Unavailable"
+
+
+def test_soilgrids_interpretation_is_farmer_readable() -> None:
+    interpretation = SoilGridsSoilProvider._interpret(
+        {
+            "Soil pH": 6.1,
+            "Clay": 42,
+            "Sand": 31,
+            "Organic carbon": 12,
+        }
+    )
+
+    assert "moderately acidic" in interpretation
+    assert "clay-rich" in interpretation
+    assert "representative soil samples" in interpretation
 
 
 def test_assistant_rejects_questions_outside_available_evidence() -> None:

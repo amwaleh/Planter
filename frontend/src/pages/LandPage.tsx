@@ -237,8 +237,22 @@ export default function LandPage() {
               <p className="eyebrow">Selected-point soil guidance</p>
               <h2>{data.soil.status}</h2>
               <p>{data.soil.interpretation}</p>
+              {Object.keys(data.soil.properties).length > 0 && (
+                <>
+                  <h3>Modelled topsoil values</h3>
+                  <dl className="soil-property-grid">
+                    {Object.entries(data.soil.properties).map(([property, value]) => (
+                      <div key={property}>
+                        <dt>{property}</dt>
+                        <dd>{value ?? "Unavailable"}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </>
+              )}
               <h3>What to test</h3>
               <ul>{data.soil.soil_test_checklist.map((item) => <li key={item}>{item}</li>)}</ul>
+              {data.soil.source && <small>Source: {data.soil.source}. {data.soil.limitations.join(" ")}</small>}
             </section>
             <section className="panel">
               <Mountain />

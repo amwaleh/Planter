@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 from app import storage
 from app.main import app
-from app.models import MapLinkResolution
+from app.models import MapLinkResolution, SoilIntelligence
 
 client = TestClient(app)
 
@@ -134,9 +134,22 @@ def test_project_api_create_update_and_reload(
 
 
 def test_land_endpoint_returns_explicit_state_when_elevation_fails() -> None:
-    with patch(
-        "app.main.provider.fetch_elevation",
-        new=AsyncMock(side_effect=HTTPError("provider unavailable")),
+    unavailable_soil = SoilIntelligence(
+        status="Unavailable",
+        properties={},
+        interpretation="Point values unavailable.",
+        soil_test_checklist=["Collect samples."],
+        limitations=["No modelled values returned."],
+    )
+    with (
+        patch(
+            "app.main.provider.fetch_elevation",
+            new=AsyncMock(side_effect=HTTPError("provider unavailable")),
+        ),
+        patch(
+            "app.main.soil_provider.profile",
+            new=AsyncMock(return_value=unavailable_soil),
+        ),
     ):
         response = client.get(
             "/api/v1/land-intelligence",
@@ -146,3 +159,33 @@ def test_land_endpoint_returns_explicit_state_when_elevation_fails() -> None:
     assert response.status_code == 200
     assert response.json()["terrain"]["elevation_m"] is None
     assert "unavailable" in response.json()["terrain"]["terrain_class"].lower()
+
+
+def test_land_endpoint_returns_selected_point_soil_values() -> None:
+    soil = SoilIntelligence(
+        status="Available",
+        properties={"Soil pH": "6.1 pH", "Clay": "42 %"},
+        interpretation="Modelled selected-point guidance.",
+        soil_test_checklist=["Confirm with representative samples."],
+        source="ISRIC SoilGrids 250 m",
+        limitations=["Modelled, not a laboratory measurement."],
+    )
+    with (
+        patch(
+            "app.main.provider.fetch_elevation",
+            new=AsyncMock(return_value=1600),
+        ),
+        patch(
+            "app.main.soil_provider.profile",
+            new=AsyncMock(return_value=soil),
+        ),
+    ):
+        response = client.get(
+            "/api/v1/land-intelligence",
+            params={"latitude": -1.2864, "longitude": 36.8172},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["soil"]["status"] == "Available"
+    assert response.json()["soil"]["properties"]["Soil pH"] == "6.1 pH"
+    assert response.json()["soil"]["source"] == "ISRIC SoilGrids 250 m"

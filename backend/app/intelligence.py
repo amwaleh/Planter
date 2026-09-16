@@ -5,6 +5,7 @@ from .models import (
     AssistantResponse,
     LandIntelligence,
     LivestockReport,
+    SoilIntelligence,
     SourceRecord,
     WaterIntelligence,
 )
@@ -22,10 +23,14 @@ def build_land_intelligence(
     latitude: float,
     longitude: float,
     elevation_m: float | None,
+    soil: SoilIntelligence | None = None,
     soil_provider: SoilProvider | None = None,
     terrain_provider: TerrainProvider | None = None,
 ) -> LandIntelligence:
-    soil = (soil_provider or UnavailableSoilProvider()).profile(latitude, longitude)
+    resolved_soil = soil or (soil_provider or UnavailableSoilProvider()).profile(
+        latitude,
+        longitude,
+    )
     terrain = (terrain_provider or ModelledElevationTerrainProvider()).profile(
         latitude,
         longitude,
@@ -34,7 +39,7 @@ def build_land_intelligence(
     return LandIntelligence(
         latitude=latitude,
         longitude=longitude,
-        soil=soil,
+        soil=resolved_soil,
         terrain=terrain,
     )
 

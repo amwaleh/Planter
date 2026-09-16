@@ -809,6 +809,34 @@ nav a {
   line-height: 1.55;
 }
 
+.soil-property-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 12px 0 18px;
+}
+
+.soil-property-grid div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8faf6;
+}
+
+.soil-property-grid dt {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.soil-property-grid dd {
+  margin: 5px 0 0;
+  color: var(--forest);
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .soil-layer-list {
   display: grid;
   gap: 8px;
@@ -1903,6 +1931,10 @@ footer p {
   .soil-gradient-labels {
     gap: 6px;
     font-size: 10px;
+  }
+
+  .soil-property-grid {
+    grid-template-columns: 1fr;
   }
 
   .controls,
