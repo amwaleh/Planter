@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
-import { Droplets, MapPin, Waves } from "lucide-react";
+import { Droplets, LoaderCircle, MapPin, Waves } from "lucide-react";
 import {
   MapContainer,
   Marker,
@@ -138,7 +138,7 @@ export default function WaterPage() {
       </section>
       <section className="page-workspace">
         <CoordinateForm latitude={latitude} longitude={longitude} onSubmit={selectLocation} />
-        <section className="panel water-map-panel">
+        <section className="panel water-map-panel" aria-busy={loading}>
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Pinpoint farm location</p>
@@ -149,18 +149,32 @@ export default function WaterPage() {
           <p className="panel-intro">
             Move the farm pin by clicking inside Kenya. Coordinates and all water evidence update together.
           </p>
-          <MapContainer center={[latitude, longitude]} zoom={11} className="water-map">
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <WaterMapController
-              latitude={latitude}
-              longitude={longitude}
-              nearestSurfaceWater={data?.nearest_surface_water ?? null}
-              onSelect={selectLocation}
-            />
-          </MapContainer>
+          {loading && (
+            <div className="water-loading-bar" role="status" aria-live="polite">
+              <span />
+              <strong>Analyzing rainfall, terrain, and nearby water...</strong>
+            </div>
+          )}
+          <div className="water-map-shell">
+            <MapContainer center={[latitude, longitude]} zoom={11} className="water-map">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <WaterMapController
+                latitude={latitude}
+                longitude={longitude}
+                nearestSurfaceWater={data?.nearest_surface_water ?? null}
+                onSelect={selectLocation}
+              />
+            </MapContainer>
+            {loading && (
+              <div className="water-map-loading" aria-hidden="true">
+                <LoaderCircle className="spin" size={30} />
+                <span>Loading this location</span>
+              </div>
+            )}
+          </div>
           <div className="water-map-location">
             <MapPin size={16} />
             <span>

@@ -679,6 +679,62 @@ nav a {
   border-radius: 14px;
 }
 
+.water-map-shell {
+  position: relative;
+}
+
+.water-loading-bar {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--forest);
+  font-size: 11px;
+}
+
+.water-loading-bar > span {
+  position: relative;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dce8de;
+}
+
+.water-loading-bar > span::after {
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--leaf), #6cbf7d, #3975a8);
+  animation: water-loading 1.15s ease-in-out infinite;
+  content: "";
+}
+
+.water-map-loading {
+  position: absolute;
+  z-index: 500;
+  inset: 14px 0 10px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  border-radius: 14px;
+  color: var(--forest);
+  background: rgb(248 250 246 / 78%);
+  font-size: 12px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+@keyframes water-loading {
+  from {
+    transform: translateX(-110%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
 .water-map-location {
   display: flex;
   align-items: center;
