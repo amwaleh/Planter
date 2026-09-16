@@ -39,7 +39,7 @@ Focused application pages:
 - `/farm-projects` — guided mouse/touch polygon drawing, vertex editing, named activity sections, in-place project updates, switchable map layers, tooltips, marker details, and fit-to-bounds controls
 - `/crop-knowledge` — broad East African fruit and vegetable catalog, attributed plant images, validated crop rules, and sourced custom-rule creation
 - `/water` — rainfall, irrigation signals, mapped surface water, and explicit groundwater/piped-water limitations
-- `/land` — available soil and terrain evidence plus field-verification guidance
+- `/land` — click-to-analyze terrain map with selectable SoilGrids pH, texture, carbon, nitrogen, CEC, and bulk-density overlays plus field-verification guidance
 - `/livestock` — deterministic livestock suitability with visible constraints
 - `/assistant` — evidence-grounded answers for supported farm questions
 

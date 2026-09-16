@@ -22,8 +22,9 @@ class UnavailableSoilProvider:
             status="Unavailable",
             properties={},
             interpretation=(
-                "Coordinate-level soil estimates are not currently connected. "
-                "Do not make fertilizer or amendment decisions from climate and elevation."
+                "SoilGrids map layers can show modelled variation around this location, "
+                "but a validated numeric point-extraction service is not connected. "
+                "Do not make fertilizer or amendment decisions from map color alone."
             ),
             soil_test_checklist=[
                 "Collect representative samples from each visibly different field section.",
@@ -33,7 +34,7 @@ class UnavailableSoilProvider:
             ],
             limitations=[
                 "No modelled soil value is substituted for a laboratory test.",
-                "KALRO and stable SoilGrids distribution options require provider validation.",
+                "The visible SoilGrids layers are 250 m modelled estimates for exploration, not laboratory measurements.",
             ],
         )
 
