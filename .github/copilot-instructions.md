@@ -62,3 +62,13 @@ Build a trustworthy Kenya-first agricultural decision-support product. Read `PLA
 ## Definition of complete
 
 A change is complete only when behavior is implemented end-to-end, tests cover the meaningful rule or transformation, errors remain visible, sources are attributed, and documentation is updated when contracts or scoring methods change.
+
+## GitHub project tracking
+
+- Use [Planter Project 3](https://github.com/users/amwaleh/projects/3) as the authoritative work tracker.
+- Before starting implementation, create or locate the corresponding GitHub issue and add it to Project 3.
+- Set the project item's status to the active/in-progress state before changing code.
+- When adjusting work already represented by an issue, add a comment describing the revised scope, decision, or implementation change before proceeding.
+- Keep acceptance criteria and important implementation decisions on the issue so project status remains understandable without reading local session history.
+- After implementation and validation, push the change, comment with the delivered result and validation evidence when useful, close the issue, and set the Project 3 item to the completed/done state.
+- Before declaring a task complete, verify that every related issue is present in Project 3 and that its issue state and project status match the actual work.
