@@ -736,9 +736,8 @@ nav a {
 }
 
 .soil-color-legend {
-  display: flex;
-  align-items: flex-start;
-  gap: 18px;
+  display: grid;
+  gap: 12px;
   margin: 14px 0 0;
   padding: 14px;
   border: 1px solid var(--line);
@@ -748,7 +747,6 @@ nav a {
 
 .soil-color-legend figcaption {
   display: grid;
-  min-width: 170px;
   gap: 4px;
   color: var(--forest);
 }
@@ -758,11 +756,56 @@ nav a {
   font-size: 11px;
 }
 
-.soil-color-legend img {
-  display: block;
-  max-width: 100%;
-  max-height: 280px;
-  object-fit: contain;
+.soil-gradient-scale {
+  min-width: 0;
+}
+
+.soil-gradient-bar {
+  height: 22px;
+  border: 1px solid rgb(25 78 54 / 18%);
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #eff225 0%,
+    #cde72d 20%,
+    #77cf3e 40%,
+    #24a844 60%,
+    #168f55 75%,
+    #21c4d3 100%
+  );
+}
+
+.soil-gradient-labels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 7px;
+  color: var(--forest);
+  font-size: 11px;
+}
+
+.soil-gradient-labels span {
+  display: grid;
+  gap: 2px;
+}
+
+.soil-gradient-labels span:nth-child(2) {
+  text-align: center;
+}
+
+.soil-gradient-labels span:last-child {
+  text-align: right;
+}
+
+.soil-gradient-labels small,
+.soil-gradient-scale p {
+  color: var(--muted);
+}
+
+.soil-gradient-scale p {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .responsible-note {
@@ -1866,8 +1909,9 @@ footer p {
     display: grid;
   }
 
-  .soil-color-legend {
-    display: grid;
+  .soil-gradient-labels {
+    gap: 6px;
+    font-size: 10px;
   }
 
   .controls,

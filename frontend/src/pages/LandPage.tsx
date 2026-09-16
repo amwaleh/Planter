@@ -24,16 +24,18 @@ interface SoilLayer {
   unit: string;
   mapFile: string;
   layer: string;
+  gradientLow: string;
+  gradientHigh: string;
 }
 
 const soilLayers: SoilLayer[] = [
-  { key: "phh2o", name: "Soil pH", description: "Acidity or alkalinity in the top 5 cm", unit: "pH x 10", mapFile: "phh2o", layer: "phh2o_0-5cm_mean" },
-  { key: "clay", name: "Clay content", description: "Modelled clay fraction in the top 5 cm", unit: "g/kg", mapFile: "clay", layer: "clay_0-5cm_mean" },
-  { key: "sand", name: "Sand content", description: "Modelled sand fraction in the top 5 cm", unit: "g/kg", mapFile: "sand", layer: "sand_0-5cm_mean" },
-  { key: "soc", name: "Organic carbon", description: "Modelled soil organic carbon in the top 5 cm", unit: "dg/kg", mapFile: "soc", layer: "soc_0-5cm_mean" },
-  { key: "nitrogen", name: "Total nitrogen", description: "Modelled total nitrogen in the top 5 cm", unit: "cg/kg", mapFile: "nitrogen", layer: "nitrogen_0-5cm_mean" },
-  { key: "cec", name: "Cation exchange capacity", description: "Modelled nutrient-holding capacity in the top 5 cm", unit: "mmol(c)/kg", mapFile: "cec", layer: "cec_0-5cm_mean" },
-  { key: "bdod", name: "Bulk density", description: "Modelled density of the fine-earth fraction in the top 5 cm", unit: "cg/cm3", mapFile: "bdod", layer: "bdod_0-5cm_mean" },
+  { key: "phh2o", name: "Soil pH", description: "Acidity or alkalinity in the top 5 cm", unit: "pH x 10", mapFile: "phh2o", layer: "phh2o_0-5cm_mean", gradientLow: "More acidic", gradientHigh: "More alkaline" },
+  { key: "clay", name: "Clay content", description: "Modelled clay fraction in the top 5 cm", unit: "g/kg", mapFile: "clay", layer: "clay_0-5cm_mean", gradientLow: "Less clay", gradientHigh: "More clay" },
+  { key: "sand", name: "Sand content", description: "Modelled sand fraction in the top 5 cm", unit: "g/kg", mapFile: "sand", layer: "sand_0-5cm_mean", gradientLow: "Less sand", gradientHigh: "More sand" },
+  { key: "soc", name: "Organic carbon", description: "Modelled soil organic carbon in the top 5 cm", unit: "dg/kg", mapFile: "soc", layer: "soc_0-5cm_mean", gradientLow: "Lower carbon", gradientHigh: "Higher carbon" },
+  { key: "nitrogen", name: "Total nitrogen", description: "Modelled total nitrogen in the top 5 cm", unit: "cg/kg", mapFile: "nitrogen", layer: "nitrogen_0-5cm_mean", gradientLow: "Lower nitrogen", gradientHigh: "Higher nitrogen" },
+  { key: "cec", name: "Cation exchange capacity", description: "Modelled nutrient-holding capacity in the top 5 cm", unit: "mmol(c)/kg", mapFile: "cec", layer: "cec_0-5cm_mean", gradientLow: "Lower capacity", gradientHigh: "Higher capacity" },
+  { key: "bdod", name: "Bulk density", description: "Modelled density of the fine-earth fraction in the top 5 cm", unit: "cg/cm3", mapFile: "bdod", layer: "bdod_0-5cm_mean", gradientLow: "Lower density", gradientHigh: "Higher density" },
 ];
 
 const markerIcon = L.divIcon({
@@ -122,7 +124,6 @@ export default function LandPage() {
   };
 
   const wmsUrl = `https://maps.isric.org/mapserv?map=/map/${selectedLayer.mapFile}.map`;
-  const legendUrl = `${wmsUrl}&version=1.3.0&service=WMS&request=GetLegendGraphic&sld_version=1.1.0&layer=${selectedLayer.layer}&format=image/png&STYLE=default`;
 
   useEffect(() => {
     setTileError(null);
@@ -194,13 +195,17 @@ export default function LandPage() {
             <figure className="soil-color-legend">
               <figcaption>
                 <strong>{selectedLayer.name} color guide</strong>
-                <span>Provider units: {selectedLayer.unit}</span>
+                <span>Yellow shows lower modelled values, green shows the middle range, and blue shows higher values.</span>
               </figcaption>
-              <img
-                key={selectedLayer.layer}
-                src={legendUrl}
-                alt={`${selectedLayer.name} SoilGrids color legend in ${selectedLayer.unit}`}
-              />
+              <div className="soil-gradient-scale" role="img" aria-label={`${selectedLayer.gradientLow} to ${selectedLayer.gradientHigh}`}>
+                <div className="soil-gradient-bar" />
+                <div className="soil-gradient-labels">
+                  <span><strong>{selectedLayer.gradientLow}</strong><small>Lower value</small></span>
+                  <span><strong>Middle range</strong><small>Green</small></span>
+                  <span><strong>{selectedLayer.gradientHigh}</strong><small>Higher value</small></span>
+                </div>
+                <p>SoilGrids units: {selectedLayer.unit}. Use the colors to compare broad patterns, not as an exact reading for the selected point.</p>
+              </div>
             </figure>
             {tileError && <div className="state-message error soil-tile-error">{tileError}</div>}
             <p className="responsible-note">This layer shows a 250 m modelled pattern at 0-5 cm depth. It can identify variation worth investigating, but it cannot diagnose the selected farm point or replace sampling.</p>
