@@ -46,10 +46,15 @@ class ModelledElevationTerrainProvider:
         longitude: float,
         elevation_m: float | None,
     ) -> TerrainIntelligence:
+        elevation_available = elevation_m is not None
         return TerrainIntelligence(
             elevation_m=elevation_m,
             slope_percent=None,
-            terrain_class="Elevation available; slope not yet available",
+            terrain_class=(
+                "Modelled elevation available; slope not yet available"
+                if elevation_available
+                else "Elevation and slope are currently unavailable"
+            ),
             drainage_interpretation=(
                 "Drainage cannot be determined from elevation alone. Observe ponding after rain "
                 "and obtain slope or field-survey evidence."
@@ -58,7 +63,11 @@ class ModelledElevationTerrainProvider:
             mechanization_note="Field access and machinery suitability require slope and ground-condition checks.",
             confidence="Low",
             limitations=[
-                "Elevation is modelled.",
+                (
+                    "Elevation is modelled."
+                    if elevation_available
+                    else "The elevation provider did not return a value for this request."
+                ),
                 "Slope, flow direction, and drainage are not inferred from one elevation value.",
             ],
         )

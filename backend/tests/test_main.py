@@ -1,5 +1,6 @@
 from pathlib import Path
 from fastapi.testclient import TestClient
+from httpx import HTTPError
 from unittest.mock import AsyncMock, patch
 
 from app import storage
@@ -130,3 +131,18 @@ def test_project_api_create_update_and_reload(
     assert reloaded.json()["boundary"] == updated_boundary
     assert reloaded.json()["sections"][0]["name"] == "South field"
     assert reloaded.json()["sections"][0]["activity"] == "Drip-irrigated vegetables"
+
+
+def test_land_endpoint_returns_explicit_state_when_elevation_fails() -> None:
+    with patch(
+        "app.main.provider.fetch_elevation",
+        new=AsyncMock(side_effect=HTTPError("provider unavailable")),
+    ):
+        response = client.get(
+            "/api/v1/land-intelligence",
+            params={"latitude": -3.43, "longitude": 39.79},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["terrain"]["elevation_m"] is None
+    assert "unavailable" in response.json()["terrain"]["terrain_class"].lower()

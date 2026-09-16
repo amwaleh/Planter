@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from app.crop_catalog import list_crop_catalog, resolve_catalog_name
-from app.intelligence import answer_farm_question
+from app.intelligence import answer_farm_question, build_land_intelligence
 from app.livestock import assess_livestock
 from app.models import ClimateMonth, CurrentWeather, RecentDay, SourceRecord
 from app.providers.open_meteo import CacheEntry, OpenMeteoData, OpenMeteoProvider
@@ -171,6 +171,14 @@ async def test_report_falls_back_to_coordinates_when_location_lookup_fails() -> 
 
 def test_surface_water_distance_uses_great_circle_distance() -> None:
     assert _distance_km(0, 0, 1, 0) == pytest.approx(111.2, rel=0.01)
+
+
+def test_land_intelligence_remains_available_without_elevation() -> None:
+    report = build_land_intelligence(-3.43, 39.79, None)
+
+    assert report.terrain.elevation_m is None
+    assert "unavailable" in report.terrain.terrain_class.lower()
+    assert report.soil.status == "Unavailable"
 
 
 def test_assistant_rejects_questions_outside_available_evidence() -> None:

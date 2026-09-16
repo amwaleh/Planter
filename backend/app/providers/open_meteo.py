@@ -19,6 +19,7 @@ from ..models import (
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+ELEVATION_URL = "https://api.open-meteo.com/v1/elevation"
 
 
 @dataclass
@@ -78,6 +79,20 @@ class OpenMeteoProvider:
         self._last_error = None
         self._cache[key] = CacheEntry(stored_at=self._last_success_at, data=data)
         return data
+
+    async def fetch_elevation(
+        self,
+        latitude: float,
+        longitude: float,
+    ) -> float | None:
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await self._get_with_retry(
+                client,
+                ELEVATION_URL,
+                {"latitude": latitude, "longitude": longitude},
+            )
+        values = response.json().get("elevation", [])
+        return float(values[0]) if values and values[0] is not None else None
 
     async def _fetch_fresh(self, latitude: float, longitude: float) -> OpenMeteoData:
         today = date.today()

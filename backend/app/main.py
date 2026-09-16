@@ -133,13 +133,10 @@ async def land_intelligence(
     longitude: float = Query(ge=33.5, le=42.1),
 ) -> LandIntelligence:
     try:
-        weather = await provider.fetch(latitude, longitude)
-        return build_land_intelligence(latitude, longitude, weather)
-    except HTTPError as error:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Terrain provider request failed: {error}",
-        ) from error
+        elevation_m = await provider.fetch_elevation(latitude, longitude)
+    except HTTPError:
+        elevation_m = None
+    return build_land_intelligence(latitude, longitude, elevation_m)
 
 
 @app.get("/api/v1/water-intelligence", response_model=WaterIntelligence)

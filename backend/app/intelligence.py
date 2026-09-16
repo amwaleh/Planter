@@ -21,7 +21,7 @@ from .service import classify_recent_conditions, compare_rainfall
 def build_land_intelligence(
     latitude: float,
     longitude: float,
-    weather: OpenMeteoData,
+    elevation_m: float | None,
     soil_provider: SoilProvider | None = None,
     terrain_provider: TerrainProvider | None = None,
 ) -> LandIntelligence:
@@ -29,7 +29,7 @@ def build_land_intelligence(
     terrain = (terrain_provider or ModelledElevationTerrainProvider()).profile(
         latitude,
         longitude,
-        weather.elevation_m,
+        elevation_m,
     )
     return LandIntelligence(
         latitude=latitude,
