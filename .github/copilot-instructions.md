@@ -2,7 +2,7 @@
 
 ## Mission
 
-Build a trustworthy Kenya-first agricultural decision-support product. Read `PLAN.md` before implementing features. Prefer a smaller evidence-backed capability over a broader feature that guesses.
+Build a trustworthy Eastern Africa agricultural decision-support product. Read `PLAN.md` before implementing features. Prefer a smaller evidence-backed capability over a broader feature that guesses.
 
 ## Architecture
 
@@ -28,7 +28,7 @@ Build a trustworthy Kenya-first agricultural decision-support product. Read `PLA
 - Use Pydantic models at boundaries and type annotations throughout.
 - HTTP calls require explicit timeouts, status handling, and provider-specific error messages.
 - Use bounded retries only for transient failures; do not broadly catch and hide exceptions.
-- Validate latitude `[-90, 90]` and longitude `[-180, 180]`; MVP location workflows should constrain selected points to Kenya.
+- Validate latitude `[-90, 90]` and longitude `[-180, 180]`; product location workflows should consistently apply the configured Eastern Africa operating bounds.
 - Keep crop rules in structured data, separate from scoring code.
 - Add focused tests for calculations, boundary values, missing evidence, and confidence degradation.
 
@@ -57,7 +57,7 @@ Build a trustworthy Kenya-first agricultural decision-support product. Read `PLA
 - Record provider coverage, resolution, update frequency, license, limitations, and last successful retrieval.
 - Do not commit API keys, access tokens, downloaded restricted datasets, or provider credentials.
 - Attribute OpenStreetMap and all other map/data providers according to their licenses.
-- Prefer authoritative Kenyan sources for agronomic recommendations and clearly identify global fallback datasets.
+- Prefer authoritative country-specific Eastern African sources for agronomic recommendations and clearly identify global fallback datasets. Do not generalize Kenya-specific guidance to another country without evidence.
 
 ## Definition of complete
 

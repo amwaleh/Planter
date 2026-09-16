@@ -3,6 +3,8 @@ from fastapi.testclient import TestClient
 from httpx import HTTPError
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 from app import storage
 from app.main import app
 from app.models import MapLinkResolution, SoilIntelligence
@@ -189,3 +191,50 @@ def test_land_endpoint_returns_selected_point_soil_values() -> None:
     assert response.json()["soil"]["status"] == "Available"
     assert response.json()["soil"]["properties"]["Soil pH"] == "6.1 pH"
     assert response.json()["soil"]["source"] == "ISRIC SoilGrids 250 m"
+
+
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [
+        (-1.2864, 36.8172),  # Kenya
+        (0.3476, 32.5825),  # Uganda
+        (-6.7924, 39.2083),  # Tanzania
+        (9.03, 38.74),  # Ethiopia
+    ],
+)
+def test_land_endpoint_accepts_eastern_africa_locations(
+    latitude: float,
+    longitude: float,
+) -> None:
+    soil = SoilIntelligence(
+        status="Unavailable",
+        properties={},
+        interpretation="Point values unavailable.",
+        soil_test_checklist=["Collect samples."],
+        limitations=["No modelled values returned."],
+    )
+    with (
+        patch(
+            "app.main.provider.fetch_elevation",
+            new=AsyncMock(return_value=1200),
+        ),
+        patch(
+            "app.main.soil_provider.profile",
+            new=AsyncMock(return_value=soil),
+        ),
+    ):
+        response = client.get(
+            "/api/v1/land-intelligence",
+            params={"latitude": latitude, "longitude": longitude},
+        )
+
+    assert response.status_code == 200
+
+
+def test_land_endpoint_rejects_location_outside_eastern_africa() -> None:
+    response = client.get(
+        "/api/v1/land-intelligence",
+        params={"latitude": -26.2, "longitude": 28.0},
+    )
+
+    assert response.status_code == 422

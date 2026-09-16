@@ -8,6 +8,5 @@ The highest-priority constraints are:
 - Keep measurements, modelled estimates, forecasts, historical patterns, rules, and AI explanations explicitly labelled.
 - Build recommendations from typed structured evidence and deterministic/testable rules.
 - Cite providers, timestamps, resolution, confidence, and limitations.
-- Optimize the map-first experience for Kenyan farmers and field conditions.
+- Optimize the map-first experience for Eastern African farmers and field conditions.
 - Keep provider integrations replaceable and failures visible.
-

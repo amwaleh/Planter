@@ -48,7 +48,7 @@ export async function searchLocations(query: string): Promise<LocationMatch[]> {
     `${API_BASE_URL}/api/v1/locations?${new URLSearchParams({ query })}`,
   );
   if (!response.ok) {
-    throw new Error("Kenyan place search is temporarily unavailable.");
+    throw new Error("Eastern Africa place search is temporarily unavailable.");
   }
   return response.json() as Promise<LocationMatch[]>;
 }

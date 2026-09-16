@@ -3,6 +3,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl
 
+from .region import (
+    EAST_AFRICA_LATITUDE_MAX,
+    EAST_AFRICA_LATITUDE_MIN,
+    EAST_AFRICA_LONGITUDE_MAX,
+    EAST_AFRICA_LONGITUDE_MIN,
+)
+
 Confidence = Literal["High", "Medium", "Low"]
 
 
@@ -189,8 +196,14 @@ class LivestockReport(BaseModel):
 
 
 class AssistantRequest(BaseModel):
-    latitude: float = Field(ge=-4.9, le=5.0)
-    longitude: float = Field(ge=33.5, le=42.1)
+    latitude: float = Field(
+        ge=EAST_AFRICA_LATITUDE_MIN,
+        le=EAST_AFRICA_LATITUDE_MAX,
+    )
+    longitude: float = Field(
+        ge=EAST_AFRICA_LONGITUDE_MIN,
+        le=EAST_AFRICA_LONGITUDE_MAX,
+    )
     question: str = Field(min_length=3, max_length=500)
     crop: str = Field(default="maize", max_length=100)
 
@@ -226,8 +239,14 @@ class FarmSection(BaseModel):
 
 class FarmProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    center_latitude: float = Field(ge=-4.9, le=5.0)
-    center_longitude: float = Field(ge=33.5, le=42.1)
+    center_latitude: float = Field(
+        ge=EAST_AFRICA_LATITUDE_MIN,
+        le=EAST_AFRICA_LATITUDE_MAX,
+    )
+    center_longitude: float = Field(
+        ge=EAST_AFRICA_LONGITUDE_MIN,
+        le=EAST_AFRICA_LONGITUDE_MAX,
+    )
     boundary: list[Coordinate] = Field(min_length=3)
     sections: list[FarmSection] = Field(default_factory=list)
 

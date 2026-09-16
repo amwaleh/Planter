@@ -4,6 +4,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 import httpx
 
 from .models import MapLinkResolution
+from .region import is_within_east_africa
 
 ALLOWED_HOSTS = {
     "maps.app.goo.gl",
@@ -66,12 +67,11 @@ async def resolve_google_maps_link(link: str) -> MapLinkResolution:
         )
 
     latitude, longitude = coordinates
-    if not (-4.9 <= latitude <= 5.0 and 33.5 <= longitude <= 42.1):
-        raise ValueError("The shared location is outside the Kenya MVP coverage area.")
+    if not is_within_east_africa(latitude, longitude):
+        raise ValueError("The shared location is outside the Eastern Africa coverage area.")
 
     return MapLinkResolution(
         latitude=latitude,
         longitude=longitude,
         resolved_url=str(response.url),
     )
-

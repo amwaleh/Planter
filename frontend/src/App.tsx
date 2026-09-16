@@ -41,6 +41,7 @@ import {
 } from "./api";
 import { SiteFooter, SiteHeader } from "./components/SiteChrome";
 import { useLanguage } from "./i18n";
+import { EAST_AFRICA_COORDINATE_HELP, isWithinEastAfrica } from "./region";
 import type { CropAssessment, FarmReport, LocationMatch } from "./types";
 
 const fallbackCrops = ["onion", "maize", "beans", "potato", "sorghum", "tomato"];
@@ -228,10 +229,16 @@ export default function App() {
   }, []);
 
   const updateLocation = (nextLatitude: number, nextLongitude: number) => {
+    if (!isWithinEastAfrica(nextLatitude, nextLongitude)) {
+      setError(EAST_AFRICA_COORDINATE_HELP);
+      return false;
+    }
+    setError(null);
     setLatitude(nextLatitude);
     setLongitude(nextLongitude);
     setLatitudeInput(nextLatitude.toFixed(4));
     setLongitudeInput(nextLongitude.toFixed(4));
+    return true;
   };
 
   const useCurrentLocation = () => {
@@ -245,7 +252,7 @@ export default function App() {
   const searchForPlace = async (event: React.FormEvent) => {
     event.preventDefault();
     if (placeQuery.trim().length < 2) {
-      setError("Enter at least two characters to search for a Kenyan place.");
+      setError("Enter at least two characters to search for an Eastern Africa place.");
       return;
     }
     setSearching(true);
@@ -256,7 +263,7 @@ export default function App() {
       setError(
         searchError instanceof Error
           ? searchError.message
-          : "Kenyan place search is unavailable.",
+          : "Eastern Africa place search is unavailable.",
       );
     } finally {
       setSearching(false);
@@ -279,8 +286,9 @@ export default function App() {
       setError("Enter valid numeric coordinates.");
       return;
     }
-    setCrop(cropInput.trim());
-    updateLocation(nextLatitude, nextLongitude);
+    if (updateLocation(nextLatitude, nextLongitude)) {
+      setCrop(cropInput.trim());
+    }
   };
 
   const submitMapLink = async (event: React.FormEvent) => {
@@ -310,7 +318,7 @@ export default function App() {
       <section className="hero">
         <div className="hero-copy">
           <p className="kicker">
-            <Sparkles size={16} /> Kenya-first farm intelligence
+            <Sparkles size={16} /> Eastern Africa farm intelligence
           </p>
           <h1>{t("heroTitle")}</h1>
           <p>{t("heroBody")}</p>
@@ -340,8 +348,8 @@ export default function App() {
           <form className="map-search" onSubmit={searchForPlace}>
             <Search size={18} />
             <input
-              aria-label="Search for a Kenyan place"
-              placeholder="Search a Kenyan town or place"
+              aria-label="Search for an Eastern Africa place"
+              placeholder="Search an Eastern Africa town or place"
               value={placeQuery}
               onChange={(event) => setPlaceQuery(event.target.value)}
             />

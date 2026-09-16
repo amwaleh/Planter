@@ -1,10 +1,10 @@
-# Planter: Kenya AI Farm Intelligence
+# Planter: Eastern Africa AI Farm Intelligence
 
 ## Vision
 
-Planter turns a GPS coordinate, dropped pin, latitude/longitude pair, or Kenyan place name into an explainable farm intelligence report. It should help a farmer decide what can grow at a location, when to plant, what conditions to expect, which risks matter, whether irrigation may be needed, and which local practices or livestock systems may fit.
+Planter turns a GPS coordinate, dropped pin, latitude/longitude pair, or Eastern African place name into an explainable farm intelligence report. It should help a farmer decide what can grow at a location, when to plant, what conditions to expect, which risks matter, whether irrigation may be needed, and which local practices or livestock systems may fit.
 
-Kenya is the MVP geography. Provider interfaces, normalized evidence, localization, and geographic configuration must support later expansion across Africa.
+Eastern Africa is the operating geography. Provider interfaces, normalized evidence, localization, and geographic configuration must support later expansion across Africa. Country-specific agronomic guidance must retain its country provenance and must not be silently generalized across the region.
 
 ## Product principles
 
@@ -17,7 +17,7 @@ Kenya is the MVP geography. Provider interfaces, normalized evidence, localizati
 
 ## MVP user journey
 
-1. Select a real Kenyan location with search, GPS, coordinates, or a map pin.
+1. Select a real Eastern African location with search, GPS, coordinates, or a map pin.
 2. Resolve coordinates into county and administrative context where available.
 3. Load current weather, forecast, historical climate, elevation, terrain, and available soil evidence.
 4. Ask whether a crop such as onions can grow there.
@@ -29,7 +29,7 @@ Kenya is the MVP geography. Provider interfaces, normalized evidence, localizati
 
 ### Location
 
-- Current GPS, map pin, coordinate entry, Kenyan place-name search, and Google Maps share-link coordinate extraction.
+- Current GPS, map pin, coordinate entry, Eastern Africa place-name search, and Google Maps share-link coordinate extraction.
 - Coordinates are canonical.
 - Resolve county, sub-county, ward, elevation, slope, and agro-ecological context only when supported by authoritative data.
 - Allow users to sketch a farm boundary and internal management sections, name each section, assign an activity or crop, and persist the result as a reusable farm project.
@@ -77,12 +77,12 @@ Kenya is the MVP geography. Provider interfaces, normalized evidence, localizati
 
 | Capability | Primary | Secondary / investigation |
 |---|---|---|
-| Forecast and current weather | Open-Meteo | Kenya Agricultural Observatory Platform |
+| Forecast and current weather | Open-Meteo | Country-specific meteorological and agricultural observatories |
 | Historical climate | Open-Meteo archive | NASA POWER |
-| Kenya soil and crop knowledge | KALRO Land Soil Crop Hub | SoilGrids, KENSOTER |
-| Water productivity | FAO WaPOR | Kenya hydrogeological/borehole sources |
+| Regional soil and crop knowledge | Country-specific agricultural research and extension sources, including KALRO for Kenya | SoilGrids, national soil references |
+| Water productivity | FAO WaPOR | Country-specific hydrogeological and borehole sources |
 | Agronomy and livestock | KALRO digital agriculture ecosystem | Validated extension publications |
-| Terrain and boundaries | Kenya GeoPortal | Open elevation and boundary datasets |
+| Terrain and boundaries | Country-specific geoportals | Open elevation and boundary datasets |
 
 Every provider record must capture geographic coverage, spatial resolution, temporal resolution, update frequency, license, limitations, last successful retrieval, and health status.
 
@@ -135,7 +135,7 @@ Use a calm, map-first interface inspired by the breadth of resources curated in 
 1. **Data discovery:** validate access, licensing, authentication, coverage, resolution, and limits.
 2. **Weather/climate:** define rainfall, temperature, humidity, anomalies, and outlook calculations.
 3. **Soil/terrain/water:** build a normalized environmental profile.
-4. **Agricultural knowledge:** curate Kenya-focused crop, planting, harvest, livestock, and practice data.
+4. **Agricultural knowledge:** curate country-specific Eastern African crop, planting, harvest, livestock, and practice data.
 5. **Suitability engine:** define testable thresholds, weights, exclusions, confidence, and validation cases.
 6. **Experience:** implement the responsive map-first workflow and explainability views.
 7. **AI:** synthesize structured evidence, explain tradeoffs, localize language, and retain citations.
@@ -144,7 +144,7 @@ Use a calm, map-first interface inspired by the breadth of resources curated in 
 
 ### Must have
 
-- Kenyan location selection and coordinate resolution.
+- Eastern Africa location selection and coordinate resolution.
 - Current/forecast weather and multi-year climate analysis.
 - Soil and elevation/topography retrieval.
 - One selected-crop evaluation and ranked alternatives using a documented method.
@@ -162,4 +162,4 @@ Use a calm, map-first interface inspired by the breadth of resources curated in 
 
 ## Definition of done
 
-The demo is ready when a user can select a Kenyan coordinate, view its weather/climate/soil/terrain profile, ask about a crop, receive explainable suitability and planting guidance, view a responsible 21-day outlook, and inspect the evidence without the system fabricating unavailable data.
+The demo is ready when a user can select an Eastern African coordinate, view its weather/climate/soil/terrain profile, ask about a crop, receive explainable suitability and planting guidance, view a responsible 21-day outlook, and inspect the evidence without the system fabricating unavailable data.

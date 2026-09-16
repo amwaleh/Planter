@@ -41,7 +41,7 @@ export function SiteFooter() {
         </span>
         Planter
       </div>
-      <p>Decision support for Kenyan farms. Verify critical decisions with local experts.</p>
+      <p>Decision support for Eastern African farms. Verify critical decisions with local experts.</p>
     </footer>
   );
 }

@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import {
+  EAST_AFRICA_COORDINATE_HELP,
+  isWithinEastAfrica,
+} from "../region";
 
 export function CoordinateForm({
   latitude,
@@ -26,12 +30,9 @@ export function CoordinateForm({
         if (
           !Number.isFinite(nextLatitude) ||
           !Number.isFinite(nextLongitude) ||
-          nextLatitude < -4.9 ||
-          nextLatitude > 5 ||
-          nextLongitude < 33.5 ||
-          nextLongitude > 42.1
+          !isWithinEastAfrica(nextLatitude, nextLongitude)
         ) {
-          setValidationError("Enter coordinates within Kenya: latitude -4.9 to 5.0 and longitude 33.5 to 42.1.");
+          setValidationError(EAST_AFRICA_COORDINATE_HELP);
           return;
         }
         setValidationError(null);

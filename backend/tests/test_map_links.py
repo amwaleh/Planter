@@ -1,6 +1,7 @@
 import pytest
 
 from app.map_links import extract_coordinates, resolve_google_maps_link
+from app.region import is_within_east_africa
 
 
 @pytest.mark.parametrize(
@@ -28,3 +29,23 @@ def test_extract_coordinates(link: str, expected: tuple[float, float]) -> None:
 async def test_rejects_non_google_hosts() -> None:
     with pytest.raises(ValueError, match="Google Maps"):
         await resolve_google_maps_link("https://example.com/maps?q=-1,36")
+
+
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [
+        (-1.2864, 36.8172),
+        (0.3476, 32.5825),
+        (-6.7924, 39.2083),
+        (9.03, 38.74),
+    ],
+)
+def test_eastern_africa_region_includes_representative_countries(
+    latitude: float,
+    longitude: float,
+) -> None:
+    assert is_within_east_africa(latitude, longitude)
+
+
+def test_eastern_africa_region_excludes_southern_africa() -> None:
+    assert not is_within_east_africa(-26.2, 28.0)

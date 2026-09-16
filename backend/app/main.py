@@ -35,6 +35,12 @@ from .providers.land import SoilGridsSoilProvider
 from .providers.open_meteo import OpenMeteoProvider
 from .providers.water import OpenStreetMapWaterProvider
 from .providers.wikimedia import WikimediaImageProvider
+from .region import (
+    EAST_AFRICA_LATITUDE_MAX,
+    EAST_AFRICA_LATITUDE_MIN,
+    EAST_AFRICA_LONGITUDE_MAX,
+    EAST_AFRICA_LONGITUDE_MIN,
+)
 from .service import create_farm_report
 from .storage import (
     get_farm_project,
@@ -57,7 +63,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="Planter API",
     version="0.1.0",
-    description="Evidence-first farm intelligence for Kenya.",
+    description="Evidence-first farm intelligence for Eastern Africa.",
     lifespan=lifespan,
 )
 app.add_middleware(
@@ -84,8 +90,14 @@ async def health() -> dict[str, str]:
 
 @app.get("/api/v1/farm-report", response_model=FarmReport)
 async def farm_report(
-    latitude: float = Query(ge=-4.9, le=5.0),
-    longitude: float = Query(ge=33.5, le=42.1),
+    latitude: float = Query(
+        ge=EAST_AFRICA_LATITUDE_MIN,
+        le=EAST_AFRICA_LATITUDE_MAX,
+    ),
+    longitude: float = Query(
+        ge=EAST_AFRICA_LONGITUDE_MIN,
+        le=EAST_AFRICA_LONGITUDE_MAX,
+    ),
     crop: str = Query(default="onion"),
 ) -> FarmReport:
     normalized_crop, was_corrected, suggestions = resolve_crop_name(crop)
@@ -131,8 +143,14 @@ async def provider_health() -> list[ProviderHealth]:
 
 @app.get("/api/v1/land-intelligence", response_model=LandIntelligence)
 async def land_intelligence(
-    latitude: float = Query(ge=-4.9, le=5.0),
-    longitude: float = Query(ge=33.5, le=42.1),
+    latitude: float = Query(
+        ge=EAST_AFRICA_LATITUDE_MIN,
+        le=EAST_AFRICA_LATITUDE_MAX,
+    ),
+    longitude: float = Query(
+        ge=EAST_AFRICA_LONGITUDE_MIN,
+        le=EAST_AFRICA_LONGITUDE_MAX,
+    ),
 ) -> LandIntelligence:
     try:
         elevation_m = await provider.fetch_elevation(latitude, longitude)
@@ -144,8 +162,14 @@ async def land_intelligence(
 
 @app.get("/api/v1/water-intelligence", response_model=WaterIntelligence)
 async def water_intelligence(
-    latitude: float = Query(ge=-4.9, le=5.0),
-    longitude: float = Query(ge=33.5, le=42.1),
+    latitude: float = Query(
+        ge=EAST_AFRICA_LATITUDE_MIN,
+        le=EAST_AFRICA_LATITUDE_MAX,
+    ),
+    longitude: float = Query(
+        ge=EAST_AFRICA_LONGITUDE_MIN,
+        le=EAST_AFRICA_LONGITUDE_MAX,
+    ),
 ) -> WaterIntelligence:
     try:
         weather = await provider.fetch(latitude, longitude)
@@ -169,8 +193,14 @@ async def water_intelligence(
 
 @app.get("/api/v1/livestock", response_model=LivestockReport)
 async def livestock(
-    latitude: float = Query(ge=-4.9, le=5.0),
-    longitude: float = Query(ge=33.5, le=42.1),
+    latitude: float = Query(
+        ge=EAST_AFRICA_LATITUDE_MIN,
+        le=EAST_AFRICA_LATITUDE_MAX,
+    ),
+    longitude: float = Query(
+        ge=EAST_AFRICA_LONGITUDE_MIN,
+        le=EAST_AFRICA_LONGITUDE_MAX,
+    ),
 ) -> LivestockReport:
     try:
         weather = await provider.fetch(latitude, longitude)
@@ -321,7 +351,7 @@ async def locations(
     query: str = Query(min_length=2, max_length=100),
 ) -> list[LocationMatch]:
     try:
-        return await provider.search_kenya(query.strip())
+        return await provider.search_east_africa(query.strip())
     except HTTPError as error:
         raise HTTPException(
             status_code=502,

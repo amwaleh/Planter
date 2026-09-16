@@ -14,6 +14,7 @@ import {
 import { getLandIntelligence } from "../api";
 import { CoordinateForm } from "../components/CoordinateForm";
 import { initialCoordinates } from "../coordinates";
+import { isWithinEastAfrica } from "../region";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
 import type { LandIntelligence } from "../types";
 
@@ -113,13 +114,8 @@ export default function LandPage() {
   }, [latitude, longitude]);
 
   const selectLocation = (nextLatitude: number, nextLongitude: number) => {
-    if (
-      nextLatitude < -4.9 ||
-      nextLatitude > 5 ||
-      nextLongitude < 33.5 ||
-      nextLongitude > 42.1
-    ) {
-      setError("Planter currently analyzes locations within Kenya. Select a point inside the supported map area.");
+    if (!isWithinEastAfrica(nextLatitude, nextLongitude)) {
+      setError("Planter currently analyzes locations within Eastern Africa. Select a point inside the supported map area.");
       return;
     }
     setLatitude(nextLatitude);

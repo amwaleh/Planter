@@ -13,6 +13,7 @@ import {
 import { getWaterIntelligence } from "../api";
 import { CoordinateForm } from "../components/CoordinateForm";
 import { initialCoordinates } from "../coordinates";
+import { isWithinEastAfrica } from "../region";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
 import type { WaterIntelligence } from "../types";
 
@@ -115,13 +116,8 @@ export default function WaterPage() {
   }, [latitude, longitude]);
 
   const selectLocation = (nextLatitude: number, nextLongitude: number) => {
-    if (
-      nextLatitude < -4.9 ||
-      nextLatitude > 5 ||
-      nextLongitude < 33.5 ||
-      nextLongitude > 42.1
-    ) {
-      setError("Planter currently analyzes locations within Kenya. Select a point inside the supported map area.");
+    if (!isWithinEastAfrica(nextLatitude, nextLongitude)) {
+      setError("Planter currently analyzes locations within Eastern Africa. Select a point inside the supported map area.");
       return;
     }
     setLatitude(nextLatitude);
@@ -147,7 +143,7 @@ export default function WaterPage() {
             <MapPin size={24} />
           </div>
           <p className="panel-intro">
-            Move the farm pin by clicking inside Kenya. Coordinates and all water evidence update together.
+            Move the farm pin by clicking inside Eastern Africa. Coordinates and all water evidence update together.
           </p>
           {loading && (
             <div className="water-loading-bar" role="status" aria-live="polite">

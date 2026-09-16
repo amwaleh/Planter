@@ -2,7 +2,7 @@
 
 **From a location to an explainable farming decision.**
 
-Planter is a Kenya-first farm intelligence prototype. A farmer selects a location and receives an evidence-backed view of current weather, climate patterns, terrain, agricultural risks, and crop suitability. The application separates measured, modelled, forecast, historical, and AI-generated information and never invents unavailable environmental data.
+Planter is an Eastern Africa farm intelligence prototype. A farmer selects a location and receives an evidence-backed view of current weather, climate patterns, terrain, agricultural risks, and crop suitability. The application separates measured, modelled, forecast, historical, and AI-generated information and never invents unavailable environmental data.
 
 ## Stack
 
@@ -45,13 +45,15 @@ Focused application pages:
 
 ## Current prototype scope
 
-- Pick a Kenyan coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
+- Pick an Eastern Africa coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
 - Draw an outer farm boundary, divide it into named activity/crop sections, and save or reload the farm project.
 - Load current weather, the previous 21 days of conditions, a responsible 21-day outlook, ten-year monthly climate, current-year rainfall comparison, and elevation.
 - Search a broad, non-exhaustive East African fruit and vegetable catalog, including common aliases and spelling correction. Only crops with validated prototype rules can be scored.
 - Inspect the crop rules behind recommendations and add sourced custom rules for additional crops.
 - Inspect practical reasons, risks, confidence, timestamps, and sources; the detailed explainability section stays collapsed until needed.
 - Show unavailable datasets honestly instead of substituting invented values.
+
+The current coordinate region covers the Eastern African mainland from Tanzania and Burundi north through South Sudan, Ethiopia, Eritrea, Djibouti, and Somalia. Environmental provider coverage is broad, but authoritative crop calendars, extension guidance, utility data, and hydrogeological evidence vary by country and must be labelled accordingly.
 
 See [PLAN.md](PLAN.md) for the product plan and [.github/copilot-instructions.md](.github/copilot-instructions.md) for implementation guardrails.
 

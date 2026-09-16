@@ -15,6 +15,7 @@ from ..models import (
     RecentDay,
     SourceRecord,
 )
+from ..region import EAST_AFRICA_COUNTRY_CODES
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
@@ -199,12 +200,11 @@ class OpenMeteoProvider:
         assert last_error is not None
         raise last_error
 
-    async def search_kenya(self, query: str) -> list[LocationMatch]:
+    async def search_east_africa(self, query: str) -> list[LocationMatch]:
         params = {
             "name": query,
-            "count": 6,
+            "count": 20,
             "language": "en",
-            "countryCode": "KE",
             "format": "json",
         }
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -218,7 +218,7 @@ class OpenMeteoProvider:
                 longitude=result["longitude"],
             )
             for result in response.json().get("results", [])
-            if result.get("country_code") == "KE"
+            if result.get("country_code") in EAST_AFRICA_COUNTRY_CODES
         ]
 
     def health(self) -> ProviderHealth:
