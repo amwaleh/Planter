@@ -36,17 +36,21 @@ Open `http://localhost:5173`. The frontend expects the API at `http://localhost:
 Focused application pages:
 
 - `/` — farm location and intelligence dashboard
-- `/farm-projects` — farm boundary, section, activity, and saved-project planning
-- `/crop-knowledge` — available crop rules and sourced custom-rule creation
+- `/farm-projects` — farm boundary, section, activity, and saved-project planning with switchable map layers, draft lines, tooltips, marker details, and fit-to-bounds controls
+- `/crop-knowledge` — broad East African fruit and vegetable catalog, attributed plant images, validated crop rules, and sourced custom-rule creation
+- `/water` — rainfall, irrigation signals, mapped surface water, and explicit groundwater/piped-water limitations
+- `/land` — available soil and terrain evidence plus field-verification guidance
+- `/livestock` — deterministic livestock suitability with visible constraints
+- `/assistant` — evidence-grounded answers for supported farm questions
 
 ## Current prototype scope
 
 - Pick a Kenyan coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
 - Draw an outer farm boundary, divide it into named activity/crop sections, and save or reload the farm project.
-- Load forecast weather, a responsible 21-day outlook, historical monthly climate, and elevation.
-- Search a catalog of 20+ Kenya-relevant crops, including common aliases and spelling correction, and evaluate them with a documented rule-based method.
+- Load current weather, the previous 21 days of conditions, a responsible 21-day outlook, ten-year monthly climate, current-year rainfall comparison, and elevation.
+- Search a broad, non-exhaustive East African fruit and vegetable catalog, including common aliases and spelling correction. Only crops with validated prototype rules can be scored.
 - Inspect the crop rules behind recommendations and add sourced custom rules for additional crops.
-- Inspect reasons, risks, confidence, timestamps, and sources.
+- Inspect practical reasons, risks, confidence, timestamps, and sources; the detailed explainability section stays collapsed until needed.
 - Show unavailable datasets honestly instead of substituting invented values.
 
 See [PLAN.md](PLAN.md) for the product plan and [.github/copilot-instructions.md](.github/copilot-instructions.md) for implementation guardrails.

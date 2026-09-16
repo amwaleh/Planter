@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from .crop_data import CROP_RULES, CropRule
 from .models import (
+    CropImageMetadata,
     CropRuleCreate,
     CropRuleRecord,
     FarmProject,
@@ -34,6 +35,15 @@ def initialize_storage() -> None:
                 boundary_json TEXT NOT NULL,
                 sections_json TEXT NOT NULL,
                 created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS crop_images (
+                crop_key TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
             """
@@ -110,8 +120,8 @@ def _project_from_row(row: sqlite3.Row) -> FarmProject:
 
 
 def list_crop_rules() -> list[CropRuleRecord]:
-    custom_keys = _custom_crop_keys()
-    return [
+    custom_records = _custom_crop_records()
+    built_in_records = [
         CropRuleRecord(
             key=key,
             name=rule.name,
@@ -125,11 +135,16 @@ def list_crop_rules() -> list[CropRuleRecord]:
             duration_max_days=rule.duration_days[1],
             planting_guidance=rule.planting_guidance,
             sensitivities=list(rule.sensitivities),
-            source="User-provided prototype rule" if key in custom_keys else "Planter prototype catalog",
-            custom=key in custom_keys,
+            source="Planter prototype catalog",
+            custom=False,
         )
         for key, rule in sorted(CROP_RULES.items(), key=lambda item: item[1].name)
+        if key not in custom_records
     ]
+    return sorted(
+        [*built_in_records, *custom_records.values()],
+        key=lambda record: record.name.lower(),
+    )
 
 
 def save_crop_rule(payload: CropRuleCreate) -> CropRuleRecord:
@@ -185,9 +200,36 @@ def load_custom_crop_rules() -> None:
         )
 
 
-def _custom_crop_keys() -> set[str]:
+def _custom_crop_records() -> dict[str, CropRuleRecord]:
     with _connect() as connection:
-        return {
-            row["key"]
-            for row in connection.execute("SELECT key FROM custom_crop_rules")
-        }
+        rows = connection.execute(
+            "SELECT key, payload_json FROM custom_crop_rules"
+        ).fetchall()
+    return {
+        row["key"]: CropRuleRecord.model_validate_json(row["payload_json"])
+        for row in rows
+    }
+
+
+def get_crop_image(crop_key: str) -> CropImageMetadata | None:
+    with _connect() as connection:
+        row = connection.execute(
+            "SELECT payload_json FROM crop_images WHERE crop_key = ?",
+            (crop_key,),
+        ).fetchone()
+    return CropImageMetadata.model_validate_json(row["payload_json"]) if row else None
+
+
+def save_crop_image(crop_key: str, image: CropImageMetadata) -> CropImageMetadata:
+    with _connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO crop_images (crop_key, payload_json, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(crop_key) DO UPDATE SET
+                payload_json = excluded.payload_json,
+                updated_at = excluded.updated_at
+            """,
+            (crop_key, image.model_dump_json(), datetime.now(timezone.utc).isoformat()),
+        )
+    return image

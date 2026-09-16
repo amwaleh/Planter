@@ -5,7 +5,10 @@ export interface SourceRecord {
   kind: "forecast" | "historical" | "modelled" | "derived" | "reference";
   retrieved_at: string;
   confidence: Confidence;
+  resolution: string | null;
   limitations: string[];
+  stale: boolean;
+  age_seconds: number;
 }
 
 export interface CurrentWeather {
@@ -14,12 +17,56 @@ export interface CurrentWeather {
   precipitation_mm: number;
   wind_speed_kmh: number;
   weather_code: number;
+  observed_at: string;
+  retrieved_at: string;
+  precipitation_meaning: string;
 }
 
 export interface ClimateMonth {
   month: string;
   rainfall_mm: number;
   mean_temperature_c: number;
+  current_year_rainfall_mm: number | null;
+  current_year_complete: boolean;
+}
+
+export interface RecentDay {
+  date: string;
+  rainfall_mm: number;
+  temperature_min_c: number;
+  temperature_max_c: number;
+  humidity_percent: number | null;
+}
+
+export interface RecentConditions {
+  days: RecentDay[];
+  classification: "Dry" | "Moderately moist" | "Wet" | "Very wet";
+  total_rainfall_mm: number;
+  rainy_days: number;
+  average_humidity_percent: number | null;
+  explanation: string;
+  confidence: Confidence;
+  method: string;
+}
+
+export interface RainfallComparison {
+  completed_months: number;
+  current_year_total_mm: number;
+  expected_total_mm: number;
+  difference_mm: number;
+  difference_percent: number | null;
+  summary: string;
+}
+
+export interface LocationContext {
+  display_name: string;
+  place: string | null;
+  ward_or_suburb: string | null;
+  subcounty: string | null;
+  county: string | null;
+  source: string;
+  retrieved_at: string;
+  limitations: string[];
 }
 
 export interface OutlookSignal {
@@ -40,6 +87,9 @@ export interface CropAssessment {
   planting_guidance: string;
   harvest_guidance: string;
   method: string;
+  confidence_explanation: string;
+  what_to_verify: string[];
+  regional_calendar_status: string;
 }
 
 export interface FarmReport {
@@ -47,9 +97,12 @@ export interface FarmReport {
   longitude: number;
   requested_crop: string;
   crop_was_corrected: boolean;
+  location: LocationContext;
   elevation_m: number | null;
   current: CurrentWeather;
+  recent: RecentConditions;
   climate: ClimateMonth[];
+  rainfall_comparison: RainfallComparison;
   outlook: OutlookSignal[];
   crop: CropAssessment;
   alternatives: CropAssessment[];
@@ -100,6 +153,14 @@ export interface FarmProject extends FarmProjectInput {
 export interface CropRule {
   key: string;
   name: string;
+  category: "fruits" | "vegetables" | "other";
+  wikipedia_title: string | null;
+  image_url: string | null;
+  image_source_page_url: string | null;
+  image_creator: string | null;
+  image_license: string | null;
+  image_license_url: string | null;
+  image_alt_text: string | null;
   temperature_min_c: number;
   temperature_max_c: number;
   monthly_rainfall_min_mm: number;
@@ -115,3 +176,107 @@ export interface CropRule {
 }
 
 export type CropRuleInput = Omit<CropRule, "key" | "custom">;
+
+export interface CropImageMetadata {
+  crop_name: string;
+  image_url: string;
+  source_page_url: string;
+  creator: string;
+  license: string;
+  license_url: string | null;
+  alt_text: string;
+  retrieved_at: string;
+}
+
+export interface CropCatalogItem {
+  name: string;
+  category: "fruits" | "vegetables" | "other";
+  aliases: string[];
+  region: string;
+  rule_status: "Validated prototype rule" | "Rule pending validation";
+  wikipedia_title: string;
+  source_notes: string[];
+  image: CropImageMetadata | null;
+}
+
+export interface SurfaceWaterFeature {
+  name: string;
+  kind: string;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+  source: string;
+  limitations: string[];
+}
+
+export interface WaterIntelligence {
+  recent_rainfall_mm: number;
+  recent_moisture_classification: string;
+  current_year_rainfall_mm: number;
+  expected_rainfall_mm: number;
+  forecast_et0_mm: number | null;
+  soil_moisture_status: string;
+  elevation_m: number | null;
+  terrain_status: string;
+  irrigation_signal: string;
+  irrigation_explanation: string;
+  nearest_surface_water: SurfaceWaterFeature | null;
+  surface_water_status: string;
+  groundwater_status: string;
+  piped_water_status: string;
+  retrieved_at: string;
+  sources: SourceRecord[];
+}
+
+export interface LandIntelligence {
+  latitude: number;
+  longitude: number;
+  soil: {
+    status: "Available" | "Unavailable";
+    properties: Record<string, number | string | null>;
+    interpretation: string;
+    soil_test_checklist: string[];
+    source: string | null;
+    limitations: string[];
+  };
+  terrain: {
+    elevation_m: number | null;
+    slope_percent: number | null;
+    terrain_class: string;
+    drainage_interpretation: string;
+    erosion_risk: string;
+    mechanization_note: string;
+    confidence: Confidence;
+    limitations: string[];
+  };
+}
+
+export interface LivestockReport {
+  latitude: number;
+  longitude: number;
+  assessments: {
+    livestock: string;
+    suitability: "Good" | "Possible with constraints" | "Poor fit";
+    confidence: Confidence;
+    reasons: string[];
+    constraints: string[];
+  }[];
+  evidence_note: string;
+}
+
+export interface AssistantResponse {
+  answer: string;
+  citations: string[];
+  supported_intent: string;
+  limitations: string[];
+}
+
+export interface ProviderHealth {
+  provider: string;
+  status: "Healthy" | "Degraded" | "Unknown";
+  cache_entries: number;
+  cache_hits: number;
+  last_success_at: string | null;
+  last_latency_ms: number | null;
+  last_error: string | null;
+}

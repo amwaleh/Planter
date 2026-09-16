@@ -52,13 +52,34 @@ def assess_crop(
         weights["elevation"] = 0.3
 
     score = round(sum(components[name] * weights[name] for name in components))
-    reasons = [
-        f"Long-term mean temperature scores {temperature}/100 against the documented crop range.",
-        f"Mean monthly rainfall scores {rainfall}/100; seasonal distribution still matters.",
-    ]
+    reasons = []
+    if temperature >= 80:
+        reasons.append(f"Typical temperatures are generally suitable for {rule.name}.")
+    elif temperature >= 55:
+        reasons.append(
+            f"Temperatures may suit {rule.name} during part of the year, but hotter or cooler periods need attention."
+        )
+    else:
+        reasons.append(
+            f"Typical temperatures are often outside the preferred range for {rule.name}."
+        )
+    if rainfall >= 80:
+        reasons.append(
+            "The long-term rainfall amount is broadly suitable, although timing within the season still matters."
+        )
+    elif rainfall >= 55:
+        reasons.append(
+            "Rainfall may support the crop in the right season, but dry spells or supplemental irrigation need checking."
+        )
+    else:
+        reasons.append(
+            "The usual rainfall amount is a weak match, so a reliable water plan or another crop may be safer."
+        )
     if elevation is not None:
         reasons.append(
-            f"Modelled elevation scores {elevation}/100 against the crop elevation range."
+            "The modelled elevation is within the crop's usual range."
+            if elevation >= 80
+            else "The farm elevation is near or outside the crop's usual range and needs local validation."
         )
 
     risks = list(rule.sensitivities)
@@ -69,6 +90,11 @@ def assess_crop(
 
     evidence_count = len(components)
     confidence = "Medium" if evidence_count == 3 else "Low"
+    confidence_explanation = (
+        "Weather, long-term climate, and modelled elevation are available, but a farm soil test, slope, drainage, variety, and water-source check are still missing."
+        if evidence_count == 3
+        else "Weather and climate are available, but elevation and farm-level soil, drainage, variety, and water evidence are incomplete."
+    )
     duration_midpoint = round(mean(rule.duration_days))
 
     return CropAssessment(
@@ -82,6 +108,15 @@ def assess_crop(
         planting_guidance=rule.planting_guidance,
         harvest_guidance=f"Typically about {duration_midpoint} days after planting; variety and field conditions change this.",
         method="Weighted climate/elevation rule v0.1",
+        confidence_explanation=confidence_explanation,
+        what_to_verify=[
+            "Laboratory or extension-supported soil test",
+            "Field drainage and slope after rainfall",
+            "Reliable water source through the crop cycle",
+            "Locally recommended variety and maturity period",
+            "County or KALRO planting guidance for the current season",
+        ],
+        regional_calendar_status="An authoritative coordinate-level planting calendar is not connected. Use the seasonal guidance only after confirmation with a local extension officer.",
     )
 
 
@@ -96,4 +131,3 @@ def rank_crops(
         if name != selected_crop
     ]
     return sorted(assessments, key=lambda item: item.score, reverse=True)
-

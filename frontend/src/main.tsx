@@ -4,7 +4,11 @@ import "leaflet/dist/leaflet.css";
 import "./styles.css";
 import App from "./App";
 import CropKnowledgePage from "./pages/CropKnowledgePage";
+import AssistantPage from "./pages/AssistantPage";
 import FarmProjectsPage from "./pages/FarmProjectsPage";
+import LandPage from "./pages/LandPage";
+import LivestockPage from "./pages/LivestockPage";
+import WaterPage from "./pages/WaterPage";
 
 const path = window.location.pathname.replace(/\/+$/, "") || "/";
 const page =
@@ -12,6 +16,14 @@ const page =
     <FarmProjectsPage />
   ) : path === "/crop-knowledge" ? (
     <CropKnowledgePage />
+  ) : path === "/water" ? (
+    <WaterPage />
+  ) : path === "/land" ? (
+    <LandPage />
+  ) : path === "/livestock" ? (
+    <LivestockPage />
+  ) : path === "/assistant" ? (
+    <AssistantPage />
   ) : (
     <App />
   );

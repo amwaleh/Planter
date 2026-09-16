@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
 import L from "leaflet";
-import { MapPin, Plus, Save, SquareDashed } from "lucide-react";
-import { MapContainer, Marker, Polygon, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { Focus, MapPin, Plus, RotateCcw, Save, SquareDashed, Undo2 } from "lucide-react";
+import {
+  FeatureGroup,
+  LayersControl,
+  MapContainer,
+  Marker,
+  Polygon,
+  Polyline,
+  Popup,
+  TileLayer,
+  Tooltip,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import { createProject, getCrops, getProjects } from "../api";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
 import type { Coordinate, FarmProject, FarmSection } from "../types";
@@ -21,6 +33,8 @@ function ProjectMap({
   boundary,
   sectionDraft,
   sections,
+  projectName,
+  fitRequest,
   onClick,
 }: {
   latitude: number;
@@ -28,6 +42,8 @@ function ProjectMap({
   boundary: Coordinate[];
   sectionDraft: Coordinate[];
   sections: FarmSection[];
+  projectName: string;
+  fitRequest: number;
   onClick: (latitude: number, longitude: number) => void;
 }) {
   const map = useMap();
@@ -41,32 +57,104 @@ function ProjectMap({
   });
   const positions = (points: Coordinate[]) =>
     points.map((point) => [point.latitude, point.longitude] as [number, number]);
+  useEffect(() => {
+    if (fitRequest === 0) return;
+    const points = [
+      [latitude, longitude] as [number, number],
+      ...positions(boundary),
+      ...positions(sectionDraft),
+      ...sections.flatMap((section) => positions(section.boundary)),
+    ];
+    if (points.length === 1) {
+      map.setView(points[0], 17);
+    } else {
+      map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 18 });
+    }
+  }, [boundary, fitRequest, latitude, longitude, map, sectionDraft, sections]);
 
   return (
     <>
-      <Marker position={[latitude, longitude]} icon={markerIcon} />
-      {boundary.length >= 2 && (
-        <Polygon
-          positions={positions(boundary)}
-          pathOptions={{ color: "#173f2a", fillColor: "#4f7b52", fillOpacity: 0.12 }}
-        />
-      )}
-      {sections.map((section, index) => (
-        <Polygon
-          key={`${section.name}-${index}`}
-          positions={positions(section.boundary)}
-          pathOptions={{
-            color: index % 2 === 0 ? "#e8b449" : "#72523f",
-            fillOpacity: 0.28,
-          }}
-        />
-      ))}
-      {sectionDraft.length >= 2 && (
-        <Polygon
-          positions={positions(sectionDraft)}
-          pathOptions={{ color: "#d36d3c", dashArray: "7 5", fillOpacity: 0.18 }}
-        />
-      )}
+      <LayersControl position="topright">
+        <LayersControl.BaseLayer checked name="Street map">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Terrain map">
+          <TileLayer
+            attribution='Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap'
+            url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.Overlay checked name="Farm marker">
+          <FeatureGroup>
+            <Marker position={[latitude, longitude]} icon={markerIcon} bubblingMouseEvents={false}>
+              <Tooltip>{projectName.trim() || "Farm centre"}</Tooltip>
+              <Popup>
+                <strong>{projectName.trim() || "Farm centre"}</strong>
+                <br />
+                {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              </Popup>
+            </Marker>
+          </FeatureGroup>
+        </LayersControl.Overlay>
+        <LayersControl.Overlay checked name="Farm boundary">
+          <FeatureGroup>
+            {boundary.length >= 2 && (
+              <Polyline positions={positions(boundary)} pathOptions={{ color: "#173f2a", weight: 3, bubblingMouseEvents: false }} />
+            )}
+            {boundary.length >= 3 && (
+              <Polygon
+                positions={positions(boundary)}
+                pathOptions={{ color: "#173f2a", fillColor: "#4f7b52", fillOpacity: 0.12, bubblingMouseEvents: false }}
+              >
+                <Tooltip sticky>{projectName.trim() || "Farm boundary"}</Tooltip>
+              </Polygon>
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+        <LayersControl.Overlay checked name="Farm sections">
+          <FeatureGroup>
+            {sections.map((section, index) => (
+              <Polygon
+                key={`${section.name}-${index}`}
+                positions={positions(section.boundary)}
+                pathOptions={{
+                  color: index % 2 === 0 ? "#e8b449" : "#72523f",
+                  fillOpacity: 0.28,
+                  bubblingMouseEvents: false,
+                }}
+              >
+                <Tooltip sticky>
+                  <strong>{section.name}</strong>
+                  <br />
+                  {section.activity}
+                  {section.crop ? ` · ${section.crop}` : ""}
+                </Tooltip>
+                <Popup>
+                  <strong>{section.name}</strong>
+                  <br />
+                  Activity: {section.activity}
+                  {section.crop && <><br />Crop/use: {section.crop}</>}
+                </Popup>
+              </Polygon>
+            ))}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+        <LayersControl.Overlay checked name="Draft lines">
+          <FeatureGroup>
+            {sectionDraft.length >= 2 && (
+              <Polyline
+                positions={positions(sectionDraft)}
+                pathOptions={{ color: "#d36d3c", dashArray: "7 5", weight: 3, bubblingMouseEvents: false }}
+              >
+                <Tooltip sticky>Section being drawn</Tooltip>
+              </Polyline>
+            )}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+      </LayersControl>
     </>
   );
 }
@@ -85,6 +173,7 @@ export default function FarmProjectsPage() {
   const [cropOptions, setCropOptions] = useState<string[]>([]);
   const [projects, setProjects] = useState<FarmProject[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [fitRequest, setFitRequest] = useState(0);
 
   useEffect(() => {
     void getProjects().then(setProjects).catch(() => setMessage("Saved farms could not be loaded."));
@@ -152,7 +241,16 @@ export default function FarmProjectsPage() {
     setBoundary(project.boundary);
     setSections(project.sections);
     setSectionDraft([]);
+    setFitRequest((request) => request + 1);
     setMessage(`Loaded ${project.name}.`);
+  };
+
+  const undoPoint = () => {
+    if (drawMode === "section") {
+      setSectionDraft((current) => current.slice(0, -1));
+    } else if (drawMode === "farm") {
+      setBoundary((current) => current.slice(0, -1));
+    }
   };
 
   return (
@@ -162,21 +260,20 @@ export default function FarmProjectsPage() {
         <p className="kicker">Farm planning workspace</p>
         <h1>Map the farm. Plan each section.</h1>
         <p>Sketch planning boundaries, assign activities, and save the farm for later review.</p>
+        <small>Map drawings are planning sketches, not surveyed or legal property boundaries.</small>
       </section>
       <section className="page-workspace">
         <div className="project-page-grid">
           <div className="project-map-shell">
             <MapContainer center={[latitude, longitude]} zoom={15} className="project-map">
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
               <ProjectMap
                 latitude={latitude}
                 longitude={longitude}
                 boundary={boundary}
                 sectionDraft={sectionDraft}
                 sections={sections}
+                projectName={projectName}
+                fitRequest={fitRequest}
                 onClick={handleMapClick}
               />
             </MapContainer>
@@ -189,6 +286,15 @@ export default function FarmProjectsPage() {
               </button>
               <button className={drawMode === "section" ? "active" : ""} type="button" onClick={() => setDrawMode("section")}>
                 <Plus size={16} /> Section
+              </button>
+              <button type="button" onClick={undoPoint} disabled={drawMode === "location" || (drawMode === "farm" ? boundary.length === 0 : sectionDraft.length === 0)}>
+                <Undo2 size={16} /> Undo point
+              </button>
+              <button type="button" onClick={() => setFitRequest((request) => request + 1)}>
+                <Focus size={16} /> View bounds
+              </button>
+              <button type="button" onClick={() => { setBoundary([]); setSections([]); setSectionDraft([]); }}>
+                <RotateCcw size={16} /> Clear
               </button>
             </div>
           </div>
@@ -246,4 +352,3 @@ export default function FarmProjectsPage() {
     </main>
   );
 }
-

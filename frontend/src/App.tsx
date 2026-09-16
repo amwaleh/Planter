@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import {
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   CloudRain,
   Crosshair,
   Droplets,
   Link2,
   LoaderCircle,
-  MapPin,
   Mountain,
   Search,
   ShieldAlert,
@@ -24,8 +24,10 @@ import {
 } from "react-leaflet";
 import {
   Bar,
-  BarChart,
+  ComposedChart,
   CartesianGrid,
+  Legend,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -38,6 +40,7 @@ import {
   searchLocations,
 } from "./api";
 import { SiteFooter, SiteHeader } from "./components/SiteChrome";
+import { useLanguage } from "./i18n";
 import type { CropAssessment, FarmReport, LocationMatch } from "./types";
 
 const fallbackCrops = ["onion", "maize", "beans", "potato", "sorghum", "tomato"];
@@ -49,6 +52,22 @@ const markerIcon = L.divIcon({
   iconSize: [28, 28],
   iconAnchor: [14, 14],
 });
+
+function formatNairobiTime(value: string): string {
+  return new Intl.DateTimeFormat("en-KE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Nairobi",
+  }).format(new Date(value));
+}
+
+function formatAge(value: string): string {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000));
+  if (minutes < 1) return "updated less than a minute ago";
+  if (minutes < 60) return `updated ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  return `updated ${hours} hour${hours === 1 ? "" : "s"} ago`;
+}
 
 function MapPicker({
   latitude,
@@ -104,14 +123,11 @@ function AssessmentPanel({ assessment }: { assessment: CropAssessment }) {
             {assessment.crop} is a {assessment.category.toLowerCase()} fit
           </h2>
         </div>
-        <div className={`score score-${assessment.category.toLowerCase()}`}>
-          <strong>{assessment.score}</strong>
-          <span>/100</span>
-        </div>
+        <span className="fit-category">{assessment.category}</span>
       </div>
       <div className="confidence-row">
         <span className="confidence">{assessment.confidence} confidence</span>
-        <span>{assessment.method}</span>
+        <span>{assessment.confidence_explanation}</span>
       </div>
       <div className="assessment-grid">
         <div>
@@ -147,11 +163,28 @@ function AssessmentPanel({ assessment }: { assessment: CropAssessment }) {
           <span>{assessment.harvest_guidance}</span>
         </div>
       </div>
+      <p className="calendar-status">{assessment.regional_calendar_status}</p>
+      <div className="verification-box">
+        <h3>What to verify before investing</h3>
+        <ul>
+          {assessment.what_to_verify.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      </div>
+      <details className="methodology">
+        <summary>How this result was calculated</summary>
+        <p>{assessment.method}</p>
+        <dl>
+          {Object.entries(assessment.component_scores).map(([name, score]) => (
+            <div key={name}><dt>{name}</dt><dd>{score}/100</dd></div>
+          ))}
+        </dl>
+      </details>
     </section>
   );
 }
 
 export default function App() {
+  const { t } = useLanguage();
   const [latitude, setLatitude] = useState(defaultLocation.latitude);
   const [longitude, setLongitude] = useState(defaultLocation.longitude);
   const [latitudeInput, setLatitudeInput] = useState(latitude.toFixed(4));
@@ -279,11 +312,8 @@ export default function App() {
           <p className="kicker">
             <Sparkles size={16} /> Kenya-first farm intelligence
           </p>
-          <h1>Know what your land can become.</h1>
-          <p>
-            Turn one location into an explainable view of weather, climate,
-            terrain, crop fit, and farm risks.
-          </p>
+          <h1>{t("heroTitle")}</h1>
+          <p>{t("heroBody")}</p>
           <div className="trust-line">
             <span>Evidence-backed</span>
             <span>Source transparent</span>
@@ -337,7 +367,7 @@ export default function App() {
           </form>
           <button className="gps-button" type="button" onClick={useCurrentLocation}>
             <Crosshair size={18} />
-            Use my location
+            {t("useLocation")}
           </button>
         </div>
       </section>
@@ -402,7 +432,7 @@ export default function App() {
             </datalist>
           </label>
           <button className="primary-button" type="submit">
-            Analyze farm
+            {t("analyze")}
           </button>
         </form>
 
@@ -424,26 +454,28 @@ export default function App() {
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Farm overview</p>
-                <h2>
-                  Evidence for {report.latitude.toFixed(3)},{" "}
-                  {report.longitude.toFixed(3)}
-                </h2>
+                <h2>{report.location.display_name}</h2>
+                <small className="coordinate-caption">
+                  {report.latitude.toFixed(5)}, {report.longitude.toFixed(5)}
+                </small>
               </div>
-              <span className="live-badge">Live provider data</span>
+              <span className="live-badge">
+                {report.sources.some((source) => source.stale) ? "Cached provider data" : "Fresh provider data"}
+              </span>
             </div>
 
             <div className="metrics-grid">
               <MetricCard
                 icon={<ThermometerSun />}
-                eyebrow="Temperature"
+                eyebrow="Current temperature"
                 value={`${report.current.temperature_c.toFixed(1)} C`}
-                detail={`${report.current.humidity_percent}% relative humidity`}
+                detail={`${report.current.humidity_percent}% humidity · observed ${formatNairobiTime(report.current.observed_at)} EAT · ${formatAge(report.current.retrieved_at)}`}
               />
               <MetricCard
                 icon={<CloudRain />}
-                eyebrow="Precipitation"
+                eyebrow="Current precipitation"
                 value={`${report.current.precipitation_mm.toFixed(1)} mm`}
-                detail="Current provider reading"
+                detail={`${report.current.precipitation_meaning} Observed ${formatNairobiTime(report.current.observed_at)} EAT.`}
               />
               <MetricCard
                 icon={<Mountain />}
@@ -462,6 +494,47 @@ export default function App() {
                 detail="Groundwater is not inferred"
               />
             </div>
+
+            <nav className="report-tabs" aria-label="Farm report sections">
+              <a href="#recent">Recent conditions</a>
+              <a href="#advisor">Crop advisor</a>
+              <a href="#climate">Rainfall and climate</a>
+              <a href={`/water?lat=${report.latitude}&lng=${report.longitude}`}>Water</a>
+              <a href={`/land?lat=${report.latitude}&lng=${report.longitude}`}>Soil and terrain</a>
+              <a href="#sources">Sources</a>
+            </nav>
+
+            <section className="panel recent-panel" id="recent">
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">Previous 21 completed days</p>
+                  <h2>{report.recent.classification}</h2>
+                </div>
+                <span className="confidence">{report.recent.confidence} confidence</span>
+              </div>
+              <p className="panel-intro">{report.recent.explanation}</p>
+              <div className="recent-summary">
+                <span><strong>{report.recent.total_rainfall_mm} mm</strong> total rain</span>
+                <span><strong>{report.recent.rainy_days}</strong> rainy days</span>
+                <span><strong>{report.recent.average_humidity_percent ?? "Unavailable"}{report.recent.average_humidity_percent !== null ? "%" : ""}</strong> average humidity</span>
+              </div>
+              <div className="chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={report.recent.days}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tickFormatter={(value) => value.slice(5)} />
+                    <YAxis yAxisId="rain" />
+                    <YAxis yAxisId="temperature" orientation="right" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="rain" dataKey="rainfall_mm" name="Rainfall mm" fill="#4f7b52" />
+                    <Line yAxisId="temperature" dataKey="temperature_max_c" name="Max C" stroke="#d36d3c" dot={false} />
+                    <Line yAxisId="temperature" dataKey="temperature_min_c" name="Min C" stroke="#3975a8" dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <details className="methodology"><summary>Classification method</summary><p>{report.recent.method}</p></details>
+            </section>
 
             <div className="content-grid" id="advisor">
               <AssessmentPanel assessment={report.crop} />
@@ -491,7 +564,7 @@ export default function App() {
             </div>
 
             <div className="content-grid">
-              <section className="panel chart-panel">
+              <section className="panel chart-panel" id="climate">
                 <div className="panel-heading">
                   <div>
                     <p className="eyebrow">Historical pattern</p>
@@ -501,15 +574,19 @@ export default function App() {
                 </div>
                 <div className="chart">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={report.climate}>
+                    <ComposedChart data={report.climate}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="month" tickLine={false} axisLine={false} />
                       <YAxis tickLine={false} axisLine={false} unit=" mm" />
                       <Tooltip />
-                      <Bar dataKey="rainfall_mm" fill="#4f7b52" radius={[6, 6, 0, 0]} />
-                    </BarChart>
+                      <Legend />
+                      <Bar dataKey="current_year_rainfall_mm" name="Current year" fill="#4f7b52" radius={[6, 6, 0, 0]} />
+                      <Line dataKey="rainfall_mm" name="10-year average" stroke="#e8b449" strokeWidth={3} />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
+                <p className="chart-summary">{report.rainfall_comparison.summary}</p>
+                <p className="chart-summary">The current month is partial and is excluded from the year-to-date comparison.</p>
               </section>
               <section className="panel alternative-panel">
                 <p className="eyebrow">Lower-risk alternative</p>
@@ -517,8 +594,8 @@ export default function App() {
                 {bestAlternative && (
                   <>
                     <div className="alternative-score">
-                      <strong>{bestAlternative.score}</strong>
-                      <span>{bestAlternative.category} suitability</span>
+                      <strong>{bestAlternative.category}</strong>
+                      <span>relative suitability from the same documented method</span>
                     </div>
                     <p>{bestAlternative.reasons[0]}</p>
                   </>
@@ -526,26 +603,30 @@ export default function App() {
               </section>
             </div>
 
-            <section className="panel sources-panel" id="sources">
-              <div className="panel-heading">
+            <details className="panel sources-panel" id="sources">
+              <summary className="panel-heading">
                 <div>
                   <p className="eyebrow">Explainability</p>
-                  <h2>Evidence and limitations</h2>
+                  <h2>Where this advice comes from</h2>
                 </div>
-                <MapPin size={24} />
-              </div>
+                <span className="sources-toggle">
+                  <span className="when-closed">Show sources and limitations</span>
+                  <span className="when-open">Hide sources and limitations</span>
+                  <ChevronDown size={22} />
+                </span>
+              </summary>
               <div className="source-table">
                 {report.sources.map((source) => (
                   <article key={`${source.provider}-${source.kind}`}>
                     <div>
-                      <strong>{source.provider}</strong>
-                      <span>{source.kind}</span>
+                      <strong>{source.kind === "derived" ? "Recommendation method" : "Farm information"}</strong>
+                      <span>{source.provider}</span>
                     </div>
                     <div>
-                      <strong>{source.confidence} confidence</strong>
-                      <span>{new Date(source.retrieved_at).toLocaleString()}</span>
+                      <strong>{source.confidence} reliability</strong>
+                      <span>{source.stale ? "Cached data" : "Updated"} {new Date(source.retrieved_at).toLocaleString()}</span>
                     </div>
-                    <p>{source.limitations.join(" ")}</p>
+                    <p>{source.resolution && `${source.resolution} `}{source.limitations.join(" ")}</p>
                   </article>
                 ))}
                 {report.unavailable.map((item) => (
@@ -558,7 +639,7 @@ export default function App() {
                   </article>
                 ))}
               </div>
-            </section>
+            </details>
           </>
         )}
       </section>

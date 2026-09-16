@@ -50,3 +50,19 @@ def test_map_link_endpoint_returns_resolved_coordinates() -> None:
 
     assert response.status_code == 200
     assert response.json()["latitude"] == -3.43486
+
+
+def test_assistant_does_not_substitute_unknown_crop() -> None:
+    response = client.post(
+        "/api/v1/assistant",
+        json={
+            "latitude": -1.2864,
+            "longitude": 36.8172,
+            "crop": "baobab",
+            "question": "Can I grow baobab here?",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["supported_intent"] == "unsupported_crop"
+    assert "No other crop was substituted." in response.json()["limitations"]
