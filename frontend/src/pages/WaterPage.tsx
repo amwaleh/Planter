@@ -1,7 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { Droplets, MapPin, Waves } from "lucide-react";
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import { getWaterIntelligence } from "../api";
 import { CoordinateForm } from "../components/CoordinateForm";
 import { initialCoordinates } from "../coordinates";
@@ -22,21 +30,103 @@ const waterIcon = L.divIcon({
   iconAnchor: [12, 12],
 });
 
+function WaterMapController({
+  latitude,
+  longitude,
+  nearestSurfaceWater,
+  onSelect,
+}: {
+  latitude: number;
+  longitude: number;
+  nearestSurfaceWater: WaterIntelligence["nearest_surface_water"];
+  onSelect: (latitude: number, longitude: number) => void;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([latitude, longitude], map.getZoom());
+  }, [latitude, longitude, map]);
+  useMapEvents({
+    click(event) {
+      onSelect(event.latlng.lat, event.latlng.lng);
+    },
+  });
+
+  return (
+    <>
+      <Marker position={[latitude, longitude]} icon={farmIcon}>
+        <Popup>
+          <strong>Selected farm location</strong>
+          <br />
+          {latitude.toFixed(6)}, {longitude.toFixed(6)}
+        </Popup>
+      </Marker>
+      {nearestSurfaceWater && (
+        <>
+          <Marker
+            position={[nearestSurfaceWater.latitude, nearestSurfaceWater.longitude]}
+            icon={waterIcon}
+          >
+            <Popup>
+              <strong>{nearestSurfaceWater.name}</strong>
+              <br />
+              {nearestSurfaceWater.kind} · {nearestSurfaceWater.distance_km} km away
+            </Popup>
+          </Marker>
+          <Polyline
+            positions={[
+              [latitude, longitude],
+              [nearestSurfaceWater.latitude, nearestSurfaceWater.longitude],
+            ]}
+            pathOptions={{ color: "#3975a8", dashArray: "7 6" }}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
 export default function WaterPage() {
   const initial = initialCoordinates();
   const [latitude, setLatitude] = useState(initial.latitude);
   const [longitude, setLongitude] = useState(initial.longitude);
   const [data, setData] = useState<WaterIntelligence | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const requestSequence = useRef(0);
 
   useEffect(() => {
+    const requestId = requestSequence.current + 1;
+    requestSequence.current = requestId;
+    setLoading(true);
     setError(null);
+    setData(null);
     void getWaterIntelligence(latitude, longitude)
-      .then(setData)
-      .catch((requestError) =>
-        setError(requestError instanceof Error ? requestError.message : "Water intelligence could not be loaded."),
-      );
+      .then((result) => {
+        if (requestSequence.current === requestId) setData(result);
+      })
+      .catch((requestError) => {
+        if (requestSequence.current === requestId) {
+          setError(requestError instanceof Error ? requestError.message : "Water intelligence could not be loaded.");
+        }
+      })
+      .finally(() => {
+        if (requestSequence.current === requestId) setLoading(false);
+      });
   }, [latitude, longitude]);
+
+  const selectLocation = (nextLatitude: number, nextLongitude: number) => {
+    if (
+      nextLatitude < -4.9 ||
+      nextLatitude > 5 ||
+      nextLongitude < 33.5 ||
+      nextLongitude > 42.1
+    ) {
+      setError("Planter currently analyzes locations within Kenya. Select a point inside the supported map area.");
+      return;
+    }
+    setLatitude(nextLatitude);
+    setLongitude(nextLongitude);
+  };
 
   return (
     <main>
@@ -47,7 +137,41 @@ export default function WaterPage() {
         <p>Rainfall and mapped surface water can guide planning, but they cannot prove groundwater depth, borehole success, or a piped connection.</p>
       </section>
       <section className="page-workspace">
-        <CoordinateForm latitude={latitude} longitude={longitude} onSubmit={(lat, lng) => { setLatitude(lat); setLongitude(lng); }} />
+        <CoordinateForm latitude={latitude} longitude={longitude} onSubmit={selectLocation} />
+        <section className="panel water-map-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Pinpoint farm location</p>
+              <h2>Click the map to analyze water evidence</h2>
+            </div>
+            <MapPin size={24} />
+          </div>
+          <p className="panel-intro">
+            Move the farm pin by clicking inside Kenya. Coordinates and all water evidence update together.
+          </p>
+          <MapContainer center={[latitude, longitude]} zoom={11} className="water-map">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <WaterMapController
+              latitude={latitude}
+              longitude={longitude}
+              nearestSurfaceWater={data?.nearest_surface_water ?? null}
+              onSelect={selectLocation}
+            />
+          </MapContainer>
+          <div className="water-map-location">
+            <MapPin size={16} />
+            <span>
+              {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              {loading && " · loading water intelligence..."}
+            </span>
+          </div>
+          <small>
+            The line to a mapped water feature is straight-line distance only. It does not establish access, quality, or reliable supply.
+          </small>
+        </section>
         {error && <div className="state-message error">{error}</div>}
         {data && (
           <div className="detail-grid">
@@ -91,37 +215,6 @@ export default function WaterPage() {
               <h2>Connection not confirmed</h2>
               <p>{data.piped_water_status}</p>
             </section>
-            {data.nearest_surface_water && (
-              <section className="panel water-map-panel">
-                <p className="eyebrow">Surface-water context</p>
-                <h2>Farm to nearest mapped feature</h2>
-                <MapContainer
-                  bounds={[
-                    [latitude, longitude],
-                    [data.nearest_surface_water.latitude, data.nearest_surface_water.longitude],
-                  ]}
-                  boundsOptions={{ padding: [40, 40] }}
-                  className="water-map"
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <Marker position={[latitude, longitude]} icon={farmIcon}><Popup>Selected farm</Popup></Marker>
-                  <Marker position={[data.nearest_surface_water.latitude, data.nearest_surface_water.longitude]} icon={waterIcon}>
-                    <Popup>{data.nearest_surface_water.name}</Popup>
-                  </Marker>
-                  <Polyline
-                    positions={[
-                      [latitude, longitude],
-                      [data.nearest_surface_water.latitude, data.nearest_surface_water.longitude],
-                    ]}
-                    pathOptions={{ color: "#3975a8", dashArray: "7 6" }}
-                  />
-                </MapContainer>
-                <small>Straight-line distance only. This does not establish access, water quality, or reliable supply.</small>
-              </section>
-            )}
             <details className="panel water-map-panel">
               <summary><strong>Water sources and limitations</strong></summary>
               <div className="source-table">

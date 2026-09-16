@@ -679,6 +679,15 @@ nav a {
   border-radius: 14px;
 }
 
+.water-map-location {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .land-map-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
