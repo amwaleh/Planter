@@ -1,3 +1,4 @@
+from app.crop_data import CROP_RULES, resolve_crop_name
 from app.models import ClimateMonth
 from app.scoring import assess_crop, category_for, range_score
 
@@ -53,3 +54,20 @@ def test_missing_elevation_reduces_confidence() -> None:
     assert assessment.confidence == "Low"
     assert "elevation" not in assessment.component_scores
 
+
+def test_crop_catalog_contains_broad_kenyan_selection() -> None:
+    assert len(CROP_RULES) >= 20
+    assert {"maize", "cassava", "coffee", "tea", "green_gram"} <= set(CROP_RULES)
+
+
+def test_crop_name_autocorrects_spelling_and_aliases() -> None:
+    assert resolve_crop_name("tomatos")[:2] == ("tomato", True)
+    assert resolve_crop_name("green grams")[:2] == ("green_gram", True)
+    assert resolve_crop_name("potato")[:2] == ("potato", False)
+
+
+def test_unknown_crop_is_not_invented() -> None:
+    crop, corrected, suggestions = resolve_crop_name("dragon fruit")
+    assert crop is None
+    assert corrected is False
+    assert suggestions == []

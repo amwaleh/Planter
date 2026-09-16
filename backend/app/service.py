@@ -51,6 +51,8 @@ async def create_farm_report(
     longitude: float,
     crop: str,
     provider: OpenMeteoProvider,
+    requested_crop: str | None = None,
+    crop_was_corrected: bool = False,
 ) -> FarmReport:
     current, climate, elevation, daily, provider_sources = await provider.fetch(
         latitude, longitude
@@ -71,6 +73,8 @@ async def create_farm_report(
     return FarmReport(
         latitude=latitude,
         longitude=longitude,
+        requested_crop=requested_crop or crop,
+        crop_was_corrected=crop_was_corrected,
         elevation_m=elevation,
         current=current,
         climate=climate,
@@ -93,4 +97,3 @@ async def create_farm_report(
             ),
         ],
     )
-

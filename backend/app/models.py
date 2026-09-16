@@ -61,9 +61,17 @@ class LocationMatch(BaseModel):
     longitude: float
 
 
+class MapLinkResolution(BaseModel):
+    latitude: float
+    longitude: float
+    resolved_url: str
+
+
 class FarmReport(BaseModel):
     latitude: float
     longitude: float
+    requested_crop: str
+    crop_was_corrected: bool
     elevation_m: float | None
     current: CurrentWeather
     climate: list[ClimateMonth]

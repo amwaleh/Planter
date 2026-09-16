@@ -287,6 +287,73 @@ nav a {
   background: #edf0e7;
 }
 
+.map-link-form {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(280px, 1.35fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px solid rgba(79, 123, 82, 0.16);
+  border-radius: 18px;
+  background: var(--forest);
+}
+
+.map-link-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+}
+
+.map-link-copy div {
+  display: grid;
+  gap: 3px;
+}
+
+.map-link-copy span:last-child {
+  color: #c7d5ca;
+  font-size: 11px;
+}
+
+.map-link-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--forest);
+  background: var(--maize);
+}
+
+.map-link-form input {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 12px 13px;
+  color: var(--forest);
+  background: white;
+}
+
+.map-link-form button {
+  min-height: 43px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 18px;
+  color: var(--forest);
+  background: var(--maize);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.map-link-form button:disabled {
+  cursor: wait;
+  opacity: 0.8;
+}
+
 .controls {
   display: grid;
   grid-template-columns: repeat(3, 1fr) auto;
@@ -341,6 +408,16 @@ nav a {
 
 .state-message.error {
   color: var(--danger);
+}
+
+.correction-message {
+  margin: -40px 0 24px;
+  padding: 11px 14px;
+  border: 1px solid #d8c47b;
+  border-radius: 10px;
+  color: #614c14;
+  background: #fff3c9;
+  font-size: 13px;
 }
 
 .spin {
@@ -717,6 +794,10 @@ footer p {
 
   .controls {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .map-link-form {
+    grid-template-columns: 1fr;
   }
 }
 

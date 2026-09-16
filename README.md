@@ -35,9 +35,9 @@ Open `http://localhost:5173`. The frontend expects the API at `http://localhost:
 
 ## Current prototype scope
 
-- Pick a Kenyan coordinate using a map, GPS, coordinate entry, or place search.
+- Pick a Kenyan coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
 - Load forecast weather, a responsible 21-day outlook, historical monthly climate, and elevation.
-- Evaluate onions, maize, beans, potatoes, sorghum, or tomatoes with a documented rule-based method.
+- Search a catalog of 20+ Kenya-relevant crops, including common aliases and spelling correction, and evaluate them with a documented rule-based method.
 - Inspect reasons, risks, confidence, timestamps, and sources.
 - Show unavailable datasets honestly instead of substituting invented values.
 
@@ -46,4 +46,3 @@ See [PLAN.md](PLAN.md) for the product plan and [.github/copilot-instructions.md
 ## Responsible-use note
 
 Planter is decision support, not a replacement for laboratory soil testing, official weather warnings, qualified agronomists, extension officers, veterinarians, or hydrogeological surveys.
-

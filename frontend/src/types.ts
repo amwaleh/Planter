@@ -45,6 +45,8 @@ export interface CropAssessment {
 export interface FarmReport {
   latitude: number;
   longitude: number;
+  requested_crop: string;
+  crop_was_corrected: boolean;
   elevation_m: number | null;
   current: CurrentWeather;
   climate: ClimateMonth[];
@@ -61,4 +63,10 @@ export interface LocationMatch {
   admin2: string | null;
   latitude: number;
   longitude: number;
+}
+
+export interface MapLinkResolution {
+  latitude: number;
+  longitude: number;
+  resolved_url: string;
 }

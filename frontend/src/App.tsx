@@ -7,6 +7,7 @@ import {
   Crosshair,
   Droplets,
   Leaf,
+  Link2,
   LoaderCircle,
   MapPin,
   Mountain,
@@ -31,10 +32,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getFarmReport, searchLocations } from "./api";
+import { getCrops, getFarmReport, resolveMapLink, searchLocations } from "./api";
 import type { CropAssessment, FarmReport, LocationMatch } from "./types";
 
-const crops = ["onion", "maize", "beans", "potato", "sorghum", "tomato"];
+const fallbackCrops = ["onion", "maize", "beans", "potato", "sorghum", "tomato"];
 const defaultLocation = { latitude: -0.7167, longitude: 36.4333 };
 
 const markerIcon = L.divIcon({
@@ -151,9 +152,13 @@ export default function App() {
   const [latitudeInput, setLatitudeInput] = useState(latitude.toFixed(4));
   const [longitudeInput, setLongitudeInput] = useState(longitude.toFixed(4));
   const [crop, setCrop] = useState("onion");
+  const [cropInput, setCropInput] = useState("onion");
+  const [cropOptions, setCropOptions] = useState(fallbackCrops);
   const [placeQuery, setPlaceQuery] = useState("");
   const [matches, setMatches] = useState<LocationMatch[]>([]);
   const [searching, setSearching] = useState(false);
+  const [mapLink, setMapLink] = useState("");
+  const [resolvingMapLink, setResolvingMapLink] = useState(false);
   const [report, setReport] = useState<FarmReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +182,12 @@ export default function App() {
   useEffect(() => {
     void loadReport();
   }, [loadReport]);
+
+  useEffect(() => {
+    void getCrops()
+      .then(setCropOptions)
+      .catch(() => setCropOptions(fallbackCrops));
+  }, []);
 
   const updateLocation = (nextLatitude: number, nextLongitude: number) => {
     setLatitude(nextLatitude);
@@ -230,7 +241,26 @@ export default function App() {
       setError("Enter valid numeric coordinates.");
       return;
     }
+    setCrop(cropInput.trim());
     updateLocation(nextLatitude, nextLongitude);
+  };
+
+  const submitMapLink = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setResolvingMapLink(true);
+    setError(null);
+    try {
+      const resolution = await resolveMapLink(mapLink.trim());
+      updateLocation(resolution.latitude, resolution.longitude);
+    } catch (resolutionError) {
+      setError(
+        resolutionError instanceof Error
+          ? resolutionError.message
+          : "The Google Maps link could not be resolved.",
+      );
+    } finally {
+      setResolvingMapLink(false);
+    }
   };
 
   const bestAlternative = useMemo(() => report?.alternatives[0], [report]);
@@ -323,6 +353,32 @@ export default function App() {
       </section>
 
       <section className="workspace" id="overview">
+        <form className="map-link-form" onSubmit={submitMapLink}>
+          <div className="map-link-copy">
+            <span className="map-link-icon">
+              <Link2 size={20} />
+            </span>
+            <div>
+              <strong>Paste a Google Maps share link</strong>
+              <span>Use the exact location from a shared pin or place.</span>
+            </div>
+          </div>
+          <input
+            aria-label="Google Maps share link"
+            type="url"
+            placeholder="https://maps.app.goo.gl/..."
+            value={mapLink}
+            onChange={(event) => setMapLink(event.target.value)}
+            required
+          />
+          <button type="submit" disabled={resolvingMapLink}>
+            {resolvingMapLink ? (
+              <LoaderCircle className="spin" size={18} />
+            ) : (
+              "Use location"
+            )}
+          </button>
+        </form>
         <form className="controls" onSubmit={submitCoordinates}>
           <label>
             Latitude
@@ -342,13 +398,18 @@ export default function App() {
           </label>
           <label>
             Crop to assess
-            <select value={crop} onChange={(event) => setCrop(event.target.value)}>
-              {crops.map((item) => (
-                <option key={item} value={item}>
-                  {item[0].toUpperCase() + item.slice(1)}
-                </option>
+            <input
+              list="crop-options"
+              value={cropInput}
+              onChange={(event) => setCropInput(event.target.value)}
+              placeholder="Type a crop, e.g. tomatoes"
+              required
+            />
+            <datalist id="crop-options">
+              {cropOptions.map((item) => (
+                <option key={item} value={item} />
               ))}
-            </select>
+            </datalist>
           </label>
           <button className="primary-button" type="submit">
             Analyze farm
@@ -364,6 +425,12 @@ export default function App() {
 
         {report && !loading && (
           <>
+            {report.crop_was_corrected && (
+              <div className="correction-message">
+                Interpreted “{report.requested_crop}” as{" "}
+                <strong>{report.crop.crop}</strong>.
+              </div>
+            )}
             <div className="section-heading">
               <div>
                 <p className="eyebrow">Farm overview</p>

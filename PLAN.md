@@ -29,7 +29,7 @@ Kenya is the MVP geography. Provider interfaces, normalized evidence, localizati
 
 ### Location
 
-- Current GPS, map pin, coordinate entry, and Kenyan place-name search.
+- Current GPS, map pin, coordinate entry, Kenyan place-name search, and Google Maps share-link coordinate extraction.
 - Coordinates are canonical.
 - Resolve county, sub-county, ward, elevation, slope, and agro-ecological context only when supported by authoritative data.
 
@@ -52,6 +52,7 @@ Kenya is the MVP geography. Provider interfaces, normalized evidence, localizati
 ### Crop suitability
 
 - Flows for “Can I grow this?” and “What should I grow?”
+- Searchable crop catalog with common-name aliases and conservative spelling correction; unsupported crops must not receive invented suitability rules.
 - Explicit scoring factors: temperature, rainfall, humidity, soil, elevation, terrain, water need, season length, and authoritative local guidance.
 - Return category, component scores, reasons, risks, confidence, planting window, expected harvest window, and alternatives.
 - Do not recommend fertilizer dosage without an authoritative source and adequate soil-test evidence.
