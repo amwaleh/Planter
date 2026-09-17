@@ -233,7 +233,7 @@ function EnsoPanel({
   };
   if (loading) {
     return (
-      <section className="panel enso-panel" aria-busy="true">
+      <section className="panel enso-panel enso-panel-state" aria-busy="true">
         <p className="eyebrow">Seasonal climate</p>
         <h2>Loading ENSO tracker...</h2>
         <div className="enso-loading"><span /></div>
@@ -242,7 +242,7 @@ function EnsoPanel({
   }
   if (!tracker || tracker.status === "Unavailable") {
     return (
-      <section className="panel enso-panel">
+      <section className="panel enso-panel enso-panel-state">
         <p className="eyebrow">Seasonal climate</p>
         <h2>ENSO tracker unavailable</h2>
         <p>{tracker?.eastern_africa_context ?? "No seasonal ENSO values were substituted."}</p>
@@ -318,7 +318,7 @@ function EnsoPanel({
           <span><i className="enso-el-nino" />El Niño</span>
         </div>
       </div>
-      <details className="enso-map-details">
+      <details className="enso-map-details" open>
         <summary>View ENSO and regional maps</summary>
         <div className="enso-map-tabs" role="tablist" aria-label="ENSO map views">
           <button
@@ -755,39 +755,39 @@ export default function App() {
               <a href="#sources">Sources</a>
             </nav>
 
-            <section className="panel recent-panel" id="recent">
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">Previous 21 completed days</p>
-                  <h2>{report.recent.classification}</h2>
+            <div className="climate-chart-grid">
+              <section className="panel recent-panel" id="recent">
+                <div className="panel-heading">
+                  <div>
+                    <p className="eyebrow">Previous 21 completed days</p>
+                    <h2>{report.recent.classification}</h2>
+                  </div>
+                  <span className="confidence">{report.recent.confidence} confidence</span>
                 </div>
-                <span className="confidence">{report.recent.confidence} confidence</span>
-              </div>
-              <p className="panel-intro">{report.recent.explanation}</p>
-              <div className="recent-summary">
-                <span><strong>{report.recent.total_rainfall_mm} mm</strong> total rain</span>
-                <span><strong>{report.recent.rainy_days}</strong> rainy days</span>
-                <span><strong>{report.recent.average_humidity_percent ?? "Unavailable"}{report.recent.average_humidity_percent !== null ? "%" : ""}</strong> average humidity</span>
-              </div>
-              <div className="chart">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={report.recent.days}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tickFormatter={(value) => value.slice(5)} />
-                    <YAxis yAxisId="rain" />
-                    <YAxis yAxisId="temperature" orientation="right" />
-                    <Tooltip />
-                    <Legend />
-                    <Bar yAxisId="rain" dataKey="rainfall_mm" name="Rainfall mm" fill="#4f7b52" />
-                    <Line yAxisId="temperature" dataKey="temperature_max_c" name="Max C" stroke="#d36d3c" dot={false} />
-                    <Line yAxisId="temperature" dataKey="temperature_min_c" name="Min C" stroke="#3975a8" dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-              <details className="methodology"><summary>Classification method</summary><p>{report.recent.method}</p></details>
-            </section>
+                <p className="panel-intro">{report.recent.explanation}</p>
+                <div className="recent-summary">
+                  <span><strong>{report.recent.total_rainfall_mm} mm</strong> total rain</span>
+                  <span><strong>{report.recent.rainy_days}</strong> rainy days</span>
+                  <span><strong>{report.recent.average_humidity_percent ?? "Unavailable"}{report.recent.average_humidity_percent !== null ? "%" : ""}</strong> average humidity</span>
+                </div>
+                <div className="chart">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={report.recent.days}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="date" tickFormatter={(value) => value.slice(5)} />
+                      <YAxis yAxisId="rain" />
+                      <YAxis yAxisId="temperature" orientation="right" />
+                      <Tooltip />
+                      <Legend />
+                      <Bar yAxisId="rain" dataKey="rainfall_mm" name="Rainfall mm" fill="#4f7b52" />
+                      <Line yAxisId="temperature" dataKey="temperature_max_c" name="Max C" stroke="#d36d3c" dot={false} />
+                      <Line yAxisId="temperature" dataKey="temperature_min_c" name="Min C" stroke="#3975a8" dot={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                <details className="methodology"><summary>Classification method</summary><p>{report.recent.method}</p></details>
+              </section>
 
-            <div className="content-grid">
               <section className="panel chart-panel" id="climate">
                 <div className="panel-heading">
                   <div>
@@ -812,13 +812,13 @@ export default function App() {
                 <p className="chart-summary">{report.rainfall_comparison.summary}</p>
                 <p className="chart-summary">The current month is partial and is excluded from the year-to-date comparison.</p>
               </section>
-              <EnsoPanel
-                tracker={ensoTracker}
-                loading={ensoLoading}
-                latitude={report.latitude}
-                longitude={report.longitude}
-              />
             </div>
+            <EnsoPanel
+              tracker={ensoTracker}
+              loading={ensoLoading}
+              latitude={report.latitude}
+              longitude={report.longitude}
+            />
 
             <div className="content-grid" id="advisor">
               <AssessmentPanel assessment={report.crop} />

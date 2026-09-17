@@ -1436,6 +1436,13 @@ nav a {
   margin-bottom: 16px;
 }
 
+.climate-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
 .panel {
   padding: 26px;
   border-radius: 18px;
@@ -1632,7 +1639,27 @@ nav a {
 }
 
 .enso-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
   min-width: 0;
+  margin-bottom: 16px;
+}
+
+.enso-panel-state {
+  display: block;
+}
+
+.enso-panel > .panel-heading,
+.enso-panel > .methodology {
+  grid-column: 1 / -1;
+}
+
+.enso-panel > .enso-status-row,
+.enso-panel > .panel-intro,
+.enso-panel > .enso-chart,
+.enso-panel > .enso-probabilities {
+  grid-column: 1;
 }
 
 .enso-status-row {
@@ -1837,9 +1864,11 @@ nav a {
 }
 
 .enso-map-details {
+  grid-column: 2;
+  grid-row: 2 / span 4;
   margin-top: 18px;
-  border-top: 1px solid var(--line);
-  padding-top: 12px;
+  border-left: 1px solid var(--line);
+  padding-left: 28px;
 }
 
 .enso-map-details > summary {
@@ -2204,6 +2233,22 @@ footer p {
 
   .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .climate-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .enso-panel {
+    display: block;
+  }
+
+  .enso-map-details {
+    margin-top: 18px;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+    padding-top: 12px;
+    padding-left: 0;
   }
 
   .project-grid {
