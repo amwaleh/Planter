@@ -592,7 +592,7 @@ export default function FarmProjectsPage() {
             </>
           ) : (
             <p className="form-message">
-              Federated sign-in is not configured for this deployment yet.
+              Account signup requires a configured Planter API for this deployment.
             </p>
           )}
         </section>
