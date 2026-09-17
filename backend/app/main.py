@@ -104,8 +104,16 @@ async def farm_report(
         ge=EAST_AFRICA_LONGITUDE_MIN,
         le=EAST_AFRICA_LONGITUDE_MAX,
     ),
-    crop: str = Query(default="onion"),
+    crop: str | None = Query(default=None),
 ) -> FarmReport:
+    if crop is None or not crop.strip():
+        return await create_farm_report(
+            latitude,
+            longitude,
+            None,
+            provider,
+            location_provider,
+        )
     normalized_crop, was_corrected, suggestions = resolve_crop_name(crop)
     if normalized_crop is None:
         catalog_item, catalog_suggestions = resolve_catalog_name(crop)

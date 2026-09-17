@@ -171,6 +171,26 @@ async def test_report_falls_back_to_coordinates_when_location_lookup_fails() -> 
     assert report.location.source == "Coordinates"
 
 
+@pytest.mark.asyncio
+async def test_report_recommends_highest_scoring_crop_when_none_is_selected() -> None:
+    weather_provider = SimpleNamespace(fetch=AsyncMock(return_value=weather_data()))
+    location_provider = SimpleNamespace(
+        reverse=AsyncMock(side_effect=httpx.ReadTimeout("location timed out"))
+    )
+
+    report = await create_farm_report(
+        -1.2864,
+        36.8172,
+        None,
+        weather_provider,
+        location_provider,
+    )
+
+    assert report.recommendation_mode is True
+    assert all(report.crop.score >= crop.score for crop in report.alternatives)
+    assert report.requested_crop == "Best crop for this location"
+
+
 def test_surface_water_distance_uses_great_circle_distance() -> None:
     assert _distance_km(0, 0, 1, 0) == pytest.approx(111.2, rel=0.01)
 

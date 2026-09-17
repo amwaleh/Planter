@@ -32,13 +32,13 @@ function apiUrl(path: string): string {
 export async function getFarmReport(
   latitude: number,
   longitude: number,
-  crop: string,
+  crop?: string,
 ): Promise<FarmReport> {
   const query = new URLSearchParams({
     latitude: latitude.toString(),
     longitude: longitude.toString(),
-    crop,
   });
+  if (crop) query.set("crop", crop);
   const response = await fetch(apiUrl(`/api/v1/farm-report?${query}`));
   if (!response.ok) {
     const payload = (await response.json()) as { detail?: string };

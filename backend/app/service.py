@@ -135,7 +135,7 @@ def compare_rainfall(climate: list) -> RainfallComparison:
 async def create_farm_report(
     latitude: float,
     longitude: float,
-    crop: str,
+    crop: str | None,
     provider: OpenMeteoProvider,
     location_provider: NominatimLocationProvider,
     requested_crop: str | None = None,
@@ -164,7 +164,18 @@ async def create_farm_report(
         location = location_result
 
     recent = classify_recent_conditions(weather.recent_days)
-    crop_assessment = assess_crop(crop, weather.climate, weather.elevation_m)
+    recommendation_mode = crop is None
+    if recommendation_mode:
+        ranked_crops = rank_crops("", weather.climate, weather.elevation_m)
+        crop_assessment = ranked_crops[0]
+        alternatives = ranked_crops[1:4]
+    else:
+        crop_assessment = assess_crop(crop, weather.climate, weather.elevation_m)
+        alternatives = rank_crops(
+            crop,
+            weather.climate,
+            weather.elevation_m,
+        )[:3]
     crop_assessment.regional_calendar_status = (
         crop_knowledge_provider or UnavailableRegionalCalendarProvider()
     ).calendar_status(crop_assessment.crop, location)
@@ -192,8 +203,9 @@ async def create_farm_report(
     return FarmReport(
         latitude=latitude,
         longitude=longitude,
-        requested_crop=requested_crop or crop,
+        requested_crop=requested_crop or crop or "Best crop for this location",
         crop_was_corrected=crop_was_corrected,
+        recommendation_mode=recommendation_mode,
         location=location,
         elevation_m=weather.elevation_m,
         current=weather.current,
@@ -202,7 +214,7 @@ async def create_farm_report(
         rainfall_comparison=compare_rainfall(weather.climate),
         outlook=build_outlook(weather.forecast_daily),
         crop=crop_assessment,
-        alternatives=rank_crops(crop, weather.climate, weather.elevation_m)[:3],
+        alternatives=alternatives,
         sources=sources,
         unavailable=[
             UnavailableCapability(

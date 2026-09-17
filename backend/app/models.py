@@ -358,6 +358,7 @@ class FarmReport(BaseModel):
     longitude: float
     requested_crop: str
     crop_was_corrected: bool
+    recommendation_mode: bool = False
     location: LocationContext
     elevation_m: float | None
     current: CurrentWeather

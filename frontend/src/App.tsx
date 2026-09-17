@@ -428,7 +428,7 @@ export default function App() {
   const reportCountry = report ? report.location.country : undefined;
 
   const loadReport = useCallback(async () => {
-    if (!crop) {
+    if (crop === null) {
       setReport(null);
       setLoading(false);
       return;
@@ -436,7 +436,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      setReport(await getFarmReport(latitude, longitude, crop));
+      setReport(await getFarmReport(latitude, longitude, crop || undefined));
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -478,6 +478,12 @@ export default function App() {
     setLatitudeInput(nextLatitude.toFixed(4));
     setLongitudeInput(nextLongitude.toFixed(4));
     return true;
+  };
+
+  const selectMapLocation = (nextLatitude: number, nextLongitude: number) => {
+    if (updateLocation(nextLatitude, nextLongitude) && !cropInput.trim()) {
+      setCrop("");
+    }
   };
 
   const useCurrentLocation = () => {
@@ -581,7 +587,7 @@ export default function App() {
             <MapPicker
               latitude={latitude}
               longitude={longitude}
-              onChange={updateLocation}
+              onChange={selectMapLocation}
             />
           </MapContainer>
           <form className="map-search" onSubmit={searchForPlace}>
@@ -696,6 +702,12 @@ export default function App() {
               <div className="correction-message">
                 Interpreted “{report.requested_crop}” as{" "}
                 <strong>{report.crop.crop}</strong>.
+              </div>
+            )}
+            {report.recommendation_mode && (
+              <div className="correction-message">
+                No crop was selected. <strong>{report.crop.crop}</strong> is the
+                highest-scoring crop in the current climate and elevation screening.
               </div>
             )}
             <div className="section-heading">

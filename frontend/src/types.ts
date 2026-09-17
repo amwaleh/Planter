@@ -142,6 +142,7 @@ export interface FarmReport {
   longitude: number;
   requested_crop: string;
   crop_was_corrected: boolean;
+  recommendation_mode: boolean;
   location: LocationContext;
   elevation_m: number | null;
   current: CurrentWeather;
