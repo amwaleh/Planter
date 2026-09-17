@@ -738,79 +738,99 @@ export default function App() {
             </div>
 
             <nav className="report-tabs" aria-label="Farm report sections">
-              <a href="#recent">Recent conditions</a>
               <a href="#advisor">Crop advisor</a>
-              <a href="#climate">Rainfall and climate</a>
               <a href={appHref(`/water?lat=${report.latitude}&lng=${report.longitude}`)}>Water</a>
               <a href={appHref(`/land?lat=${report.latitude}&lng=${report.longitude}`)}>Soil and terrain</a>
+              <a href="#weather">Weather and climate</a>
               <a href="#sources">Sources</a>
             </nav>
 
-            <div className="climate-chart-grid">
-              <section className="panel recent-panel" id="recent">
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">Previous 21 completed days</p>
-                    <h2>{report.recent.classification}</h2>
-                  </div>
-                  <span className="confidence">{report.recent.confidence} confidence</span>
-                </div>
-                <p className="panel-intro">{report.recent.explanation}</p>
-                <div className="recent-summary">
-                  <span><strong>{report.recent.total_rainfall_mm} mm</strong> total rain</span>
-                  <span><strong>{report.recent.rainy_days}</strong> rainy days</span>
-                  <span><strong>{report.recent.average_humidity_percent ?? "Unavailable"}{report.recent.average_humidity_percent !== null ? "%" : ""}</strong> average humidity</span>
-                </div>
-                <div className="chart">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={report.recent.days}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="date" tickFormatter={(value) => value.slice(5)} />
-                      <YAxis yAxisId="rain" />
-                      <YAxis yAxisId="temperature" orientation="right" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar yAxisId="rain" dataKey="rainfall_mm" name="Rainfall mm" fill="#4f7b52" />
-                      <Line yAxisId="temperature" dataKey="temperature_max_c" name="Max C" stroke="#d36d3c" dot={false} />
-                      <Line yAxisId="temperature" dataKey="temperature_min_c" name="Min C" stroke="#3975a8" dot={false} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-                <details className="methodology"><summary>Classification method</summary><p>{report.recent.method}</p></details>
-              </section>
-
-              <section className="panel chart-panel" id="climate">
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">Historical pattern</p>
-                    <h2>Monthly rainfall</h2>
-                  </div>
-                  <CloudRain size={24} />
-                </div>
-                <div className="chart">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={report.climate}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" tickLine={false} axisLine={false} />
-                      <YAxis tickLine={false} axisLine={false} unit=" mm" />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="current_year_rainfall_mm" name="Current year" fill="#4f7b52" radius={[6, 6, 0, 0]} />
-                      <Line dataKey="rainfall_mm" name="10-year average" stroke="#e8b449" strokeWidth={3} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="chart-summary">{report.rainfall_comparison.summary}</p>
-                <p className="chart-summary">The current month is partial and is excluded from the year-to-date comparison.</p>
-              </section>
-            </div>
-            <EnsoPanel
-              tracker={ensoTracker}
-              loading={ensoLoading}
-            />
-
             <div className="content-grid" id="advisor">
               <AssessmentPanel assessment={report.crop} />
+              <section className="panel alternative-panel">
+                <p className="eyebrow">Lower-risk alternative</p>
+                <h2>{bestAlternative?.crop ?? "No alternative assessed"}</h2>
+                {bestAlternative && (
+                  <>
+                    <div className="alternative-score">
+                      <strong>{bestAlternative.category}</strong>
+                      <span>relative suitability from the same documented method</span>
+                    </div>
+                    <p>{bestAlternative.reasons[0]}</p>
+                  </>
+                )}
+              </section>
+            </div>
+
+            <section className="weather-section" id="weather">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Environmental evidence</p>
+                  <h2>Weather and seasonal climate</h2>
+                </div>
+              </div>
+
+              <div className="climate-chart-grid">
+                <section className="panel recent-panel" id="recent">
+                  <div className="panel-heading">
+                    <div>
+                      <p className="eyebrow">Previous 21 completed days</p>
+                      <h2>{report.recent.classification}</h2>
+                    </div>
+                    <span className="confidence">{report.recent.confidence} confidence</span>
+                  </div>
+                  <p className="panel-intro">{report.recent.explanation}</p>
+                  <div className="recent-summary">
+                    <span><strong>{report.recent.total_rainfall_mm} mm</strong> total rain</span>
+                    <span><strong>{report.recent.rainy_days}</strong> rainy days</span>
+                    <span><strong>{report.recent.average_humidity_percent ?? "Unavailable"}{report.recent.average_humidity_percent !== null ? "%" : ""}</strong> average humidity</span>
+                  </div>
+                  <div className="chart">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={report.recent.days}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="date" tickFormatter={(value) => value.slice(5)} />
+                        <YAxis yAxisId="rain" />
+                        <YAxis yAxisId="temperature" orientation="right" />
+                        <Tooltip />
+                        <Legend />
+                        <Bar yAxisId="rain" dataKey="rainfall_mm" name="Rainfall mm" fill="#4f7b52" />
+                        <Line yAxisId="temperature" dataKey="temperature_max_c" name="Max C" stroke="#d36d3c" dot={false} />
+                        <Line yAxisId="temperature" dataKey="temperature_min_c" name="Min C" stroke="#3975a8" dot={false} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <details className="methodology"><summary>Classification method</summary><p>{report.recent.method}</p></details>
+                </section>
+
+                <section className="panel chart-panel" id="climate">
+                  <div className="panel-heading">
+                    <div>
+                      <p className="eyebrow">Historical pattern</p>
+                      <h2>Monthly rainfall</h2>
+                    </div>
+                    <CloudRain size={24} />
+                  </div>
+                  <div className="chart">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={report.climate}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                        <YAxis tickLine={false} axisLine={false} unit=" mm" />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="current_year_rainfall_mm" name="Current year" fill="#4f7b52" radius={[6, 6, 0, 0]} />
+                        <Line dataKey="rainfall_mm" name="10-year average" stroke="#e8b449" strokeWidth={3} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="chart-summary">{report.rainfall_comparison.summary}</p>
+                  <p className="chart-summary">The current month is partial and is excluded from the year-to-date comparison.</p>
+                </section>
+              </div>
+
+              <EnsoPanel tracker={ensoTracker} loading={ensoLoading} />
+
               <section className="panel outlook-panel">
                 <div className="panel-heading">
                   <div>
@@ -839,20 +859,6 @@ export default function App() {
                   ))}
                 </div>
               </section>
-            </div>
-
-            <section className="panel alternative-panel">
-              <p className="eyebrow">Lower-risk alternative</p>
-              <h2>{bestAlternative?.crop ?? "No alternative assessed"}</h2>
-              {bestAlternative && (
-                <>
-                  <div className="alternative-score">
-                    <strong>{bestAlternative.category}</strong>
-                    <span>relative suitability from the same documented method</span>
-                  </div>
-                  <p>{bestAlternative.reasons[0]}</p>
-                </>
-              )}
             </section>
 
             <details className="panel sources-panel" id="sources">
