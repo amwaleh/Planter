@@ -262,6 +262,9 @@ def test_enso_endpoint_returns_normalized_tracker() -> None:
             }
         ],
         eastern_africa_context="Confirm the regional seasonal outlook.",
+        regional_location="Kenya",
+        regional_season="OND",
+        regional_relationship="Historically relevant",
         confidence="Medium",
         source="NOAA Climate Prediction Center",
         source_url="https://www.cpc.ncep.noaa.gov/",

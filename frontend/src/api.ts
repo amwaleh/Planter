@@ -44,8 +44,9 @@ export async function getCrops(): Promise<string[]> {
   return response.json() as Promise<string[]>;
 }
 
-export async function getEnsoTracker(): Promise<EnsoTracker> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/enso`);
+export async function getEnsoTracker(country?: string | null): Promise<EnsoTracker> {
+  const query = country ? `?${new URLSearchParams({ country })}` : "";
+  const response = await fetch(`${API_BASE_URL}/api/v1/enso${query}`);
   if (!response.ok) {
     throw new Error("Seasonal ENSO context could not be loaded.");
   }

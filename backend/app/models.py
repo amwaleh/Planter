@@ -94,6 +94,13 @@ class EnsoTracker(BaseModel):
     observations: list[EnsoObservation] = Field(default_factory=list)
     probabilities: list[EnsoProbability] = Field(default_factory=list)
     eastern_africa_context: str
+    regional_location: str
+    regional_season: str
+    regional_relationship: Literal[
+        "Historically relevant",
+        "Mixed / season-dependent",
+        "Not established",
+    ]
     confidence: Confidence
     source: str
     source_url: HttpUrl
@@ -109,6 +116,7 @@ class LocationContext(BaseModel):
     ward_or_suburb: str | None = None
     subcounty: str | None = None
     county: str | None = None
+    country: str | None = None
     source: str
     retrieved_at: datetime
     limitations: list[str] = Field(default_factory=list)

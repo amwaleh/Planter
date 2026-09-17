@@ -81,6 +81,12 @@ export interface EnsoTracker {
   observations: EnsoObservation[];
   probabilities: EnsoProbability[];
   eastern_africa_context: string;
+  regional_location: string;
+  regional_season: string;
+  regional_relationship:
+    | "Historically relevant"
+    | "Mixed / season-dependent"
+    | "Not established";
   confidence: Confidence;
   source: string;
   source_url: string;
@@ -96,6 +102,7 @@ export interface LocationContext {
   ward_or_suburb: string | null;
   subcounty: string | null;
   county: string | null;
+  country: string | null;
   source: string;
   retrieved_at: string;
   limitations: string[];

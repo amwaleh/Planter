@@ -1645,6 +1645,15 @@ nav a {
   font-size: 12px;
 }
 
+.enso-regional-badge {
+  padding: 6px 10px;
+  border: 1px solid #c9d9c7;
+  border-radius: 999px;
+  color: var(--forest);
+  background: #f3f7ef;
+  font-weight: 800;
+}
+
 .enso-phase,
 .enso-outlook-badge {
   display: inline-flex;
@@ -1698,6 +1707,74 @@ nav a {
 .enso-probabilities {
   display: grid;
   gap: 7px;
+}
+
+.enso-help {
+  position: relative;
+  width: fit-content;
+  margin-bottom: 5px;
+}
+
+.enso-help button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 5px 0;
+  color: var(--leaf);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: help;
+}
+
+.enso-help-popover {
+  position: absolute;
+  z-index: 700;
+  top: calc(100% + 6px);
+  left: 0;
+  display: none;
+  width: min(440px, calc(100vw - 64px));
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: white;
+  box-shadow: 0 14px 34px rgb(31 54 39 / 18%);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.enso-help:hover .enso-help-popover,
+.enso-help:focus-within .enso-help-popover {
+  display: block;
+}
+
+.enso-help-popover p {
+  margin: 7px 0;
+}
+
+.enso-help-popover dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px 12px;
+  margin: 9px 0;
+}
+
+.enso-help-popover dl div {
+  display: flex;
+  gap: 5px;
+}
+
+.enso-help-popover dt {
+  color: var(--forest);
+  font-weight: 900;
+}
+
+.enso-help-popover dd {
+  margin: 0;
+  color: var(--muted);
 }
 
 .enso-probability-row {

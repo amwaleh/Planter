@@ -145,8 +145,10 @@ async def provider_health() -> list[ProviderHealth]:
 
 
 @app.get("/api/v1/enso", response_model=EnsoTracker)
-async def enso() -> EnsoTracker:
-    return await enso_provider.fetch()
+async def enso(
+    country: str | None = Query(default=None, min_length=2, max_length=100),
+) -> EnsoTracker:
+    return await enso_provider.fetch(country.strip() if country else None)
 
 
 @app.get("/api/v1/land-intelligence", response_model=LandIntelligence)

@@ -39,6 +39,7 @@ class NominatimLocationProvider:
         county = address.get("county") or address.get("state")
         ward = address.get("suburb") or address.get("quarter")
         subcounty = address.get("city_district") or address.get("district")
+        country = address.get("country")
         display_parts = [part for part in (place, county) if part]
         display_name = ", ".join(display_parts) or f"{latitude:.4f}, {longitude:.4f}"
         return LocationContext(
@@ -47,6 +48,7 @@ class NominatimLocationProvider:
             ward_or_suburb=ward,
             subcounty=subcounty,
             county=county,
+            country=country,
             source="OpenStreetMap Nominatim",
             retrieved_at=datetime.now(timezone.utc),
             limitations=[
@@ -54,4 +56,3 @@ class NominatimLocationProvider:
                 "Coordinates remain the authoritative location used for environmental queries.",
             ],
         )
-

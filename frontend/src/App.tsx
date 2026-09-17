@@ -8,6 +8,7 @@ import {
   CloudRain,
   Crosshair,
   Droplets,
+  Info,
   Link2,
   LoaderCircle,
   Mountain,
@@ -198,6 +199,17 @@ function EnsoPanel({
   tracker: EnsoTracker | null;
   loading: boolean;
 }) {
+  const seasonNames: Record<string, string> = {
+    ASO: "Aug–Sep–Oct",
+    SON: "Sep–Oct–Nov",
+    OND: "Oct–Nov–Dec",
+    NDJ: "Nov–Dec–Jan",
+    DJF: "Dec–Jan–Feb",
+    JFM: "Jan–Feb–Mar",
+    FMA: "Feb–Mar–Apr",
+    MAM: "Mar–Apr–May",
+    AMJ: "Apr–May–Jun",
+  };
   if (loading) {
     return (
       <section className="panel enso-panel" aria-busy="true">
@@ -228,6 +240,9 @@ function EnsoPanel({
       </div>
       <div className="enso-status-row">
         <span className={`enso-phase enso-${phaseClass}`}>{tracker.outlook_phase}</span>
+        <span className="enso-regional-badge">
+          {tracker.regional_location} · {tracker.regional_season}: {tracker.regional_relationship}
+        </span>
         <span>
           Latest ONI: <strong>{tracker.latest_observation?.anomaly_c.toFixed(2)}°C</strong>
           {" · "}{tracker.latest_observation?.season} {tracker.latest_observation?.year}
@@ -246,9 +261,28 @@ function EnsoPanel({
         </ResponsiveContainer>
       </div>
       <div className="enso-probabilities" aria-label="NOAA ENSO phase probabilities">
+        <div className="enso-help">
+          <button type="button" aria-describedby="enso-probability-help">
+            <Info size={16} />
+            How to read these probabilities
+          </button>
+          <div className="enso-help-popover" id="enso-probability-help" role="tooltip">
+            <strong>Each code covers three months.</strong>
+            <p>
+              Values are always ordered <b>La Niña / Neutral / El Niño</b>. For example,
+              0% / 18% / 82% means an 82% El Niño probability, not an 82% chance of rain.
+            </p>
+            <dl>
+              {Object.entries(seasonNames).map(([code, months]) => (
+                <div key={code}><dt>{code}</dt><dd>{months}</dd></div>
+              ))}
+            </dl>
+            <small>NOAA displays 0% as approximately zero, not impossible.</small>
+          </div>
+        </div>
         {tracker.probabilities.map((probability) => (
           <div className="enso-probability-row" key={probability.season}>
-            <strong>{probability.season}</strong>
+            <strong title={seasonNames[probability.season]}>{probability.season}</strong>
             <div className="enso-probability-bar">
               <span className="enso-la-nina" style={{ width: `${probability.la_nina_percent}%` }} />
               <span className="enso-neutral" style={{ width: `${probability.neutral_percent}%` }} />
@@ -300,6 +334,7 @@ export default function App() {
   const [ensoLoading, setEnsoLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const reportCountry = report ? report.location.country : undefined;
 
   const loadReport = useCallback(async () => {
     setLoading(true);
@@ -328,11 +363,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void getEnsoTracker()
+    if (reportCountry === undefined) return;
+    setEnsoLoading(true);
+    void getEnsoTracker(reportCountry)
       .then(setEnsoTracker)
       .catch(() => setEnsoTracker(null))
       .finally(() => setEnsoLoading(false));
-  }, []);
+  }, [reportCountry]);
 
   const updateLocation = (nextLatitude: number, nextLongitude: number) => {
     if (!isWithinEastAfrica(nextLatitude, nextLongitude)) {

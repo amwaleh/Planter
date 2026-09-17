@@ -29,14 +29,14 @@ class EnsoProvider:
         self._cached: EnsoTracker | None = None
         self._cached_at: datetime | None = None
 
-    async def fetch(self) -> EnsoTracker:
+    async def fetch(self, country: str | None = None) -> EnsoTracker:
         now = datetime.now(timezone.utc)
         if (
             self._cached is not None
             and self._cached_at is not None
             and now - self._cached_at <= self.ttl
         ):
-            return self._cached
+            return self._with_region(self._cached, country)
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -48,7 +48,7 @@ class EnsoProvider:
             )
             self._cached = tracker
             self._cached_at = now
-            return tracker
+            return self._with_region(tracker, country)
         except (httpx.HTTPError, ValueError):
             if self._cached is not None:
                 stale = self._cached.model_copy(deep=True)
@@ -56,8 +56,8 @@ class EnsoProvider:
                 stale.limitations.append(
                     "The latest NOAA retrieval failed; cached ENSO data is shown."
                 )
-                return stale
-            return self.unavailable(now)
+                return self._with_region(stale, country)
+            return self.unavailable(now, country)
 
     async def _fetch_sources(
         self,
@@ -118,7 +118,14 @@ class EnsoProvider:
             latest_observation=latest,
             observations=observations[-12:],
             probabilities=probabilities[:9],
-            eastern_africa_context=cls._regional_context(outlook_phase),
+            eastern_africa_context=cls._regional_context(
+                outlook_phase,
+                None,
+                first_probability.season,
+            )[1],
+            regional_location="Eastern Africa",
+            regional_season=first_probability.season,
+            regional_relationship="Mixed / season-dependent",
             confidence="Medium",
             source="NOAA Climate Prediction Center",
             source_url=PROBABILITIES_URL,
@@ -151,27 +158,106 @@ class EnsoProvider:
         return observations
 
     @staticmethod
-    def _regional_context(outlook_phase: str) -> str:
+    def _regional_context(
+        outlook_phase: str,
+        country: str | None,
+        season: str,
+    ) -> tuple[str, str]:
+        location = country or "the selected Eastern Africa location"
+        normalized_country = (country or "").lower()
+        short_rains_countries = (
+            "kenya",
+            "somalia",
+            "uganda",
+            "rwanda",
+            "burundi",
+            "tanzania",
+        )
+        short_rains_seasons = {"SON", "OND", "NDJ"}
+        short_rains_relevant = (
+            any(name in normalized_country for name in short_rains_countries)
+            and season in short_rains_seasons
+        )
+
+        if outlook_phase == "El Niño" and short_rains_relevant:
+            return (
+                "Historically relevant",
+                f"For {location}, El Niño has often been associated with wetter short-rains "
+                f"conditions around {season} in parts of the country, increasing waterlogging "
+                "and flood risk. The relationship varies within the country; confirm it with "
+                "the current ICPAC and national seasonal forecast.",
+            )
+        if outlook_phase == "La Niña" and short_rains_relevant:
+            return (
+                "Historically relevant",
+                f"For {location}, La Niña has often been associated with drier short-rains "
+                f"conditions around {season} in parts of the country, increasing water-stress "
+                "risk. The relationship varies within the country; confirm it with the current "
+                "ICPAC and national seasonal forecast.",
+            )
         if outlook_phase == "El Niño":
             return (
+                "Mixed / season-dependent",
                 "El Niño can increase heavy-rain and flood risk in parts of Eastern Africa "
-                "during some seasons, while other areas or seasons may be drier. Protect drainage "
-                "and stored harvests, but confirm the selected area's outlook with ICPAC and the "
-                "national meteorological service."
+                f"during some seasons, but the relationship for {location} in {season} is mixed "
+                "or not strong enough for a local wet/dry conclusion. Use the current ICPAC and "
+                "national seasonal forecast."
             )
         if outlook_phase == "La Niña":
             return (
+                "Mixed / season-dependent",
                 "La Niña can raise dry-spell and water-stress risk in parts of Eastern Africa "
-                "during some seasons, but effects are not uniform. Review water access, drought "
-                "tolerance, and the selected area's ICPAC and national seasonal outlook."
+                f"during some seasons, but the relationship for {location} in {season} is mixed "
+                "or not strong enough for a local wet/dry conclusion. Use the current ICPAC and "
+                "national seasonal forecast."
             )
         return (
-            "Neutral ENSO conditions do not remove seasonal drought or flood risk. Use ICPAC and "
-            "the national meteorological outlook for the selected area's rainfall probabilities."
+            "Mixed / season-dependent",
+            f"Neutral ENSO conditions do not remove seasonal drought or flood risk for {location}. "
+            "Use ICPAC and the national meteorological outlook for local rainfall probabilities.",
         )
 
+    @classmethod
+    def _with_region(
+        cls,
+        tracker: EnsoTracker,
+        country: str | None,
+    ) -> EnsoTracker:
+        contextualized = tracker.model_copy(deep=True)
+        if contextualized.status == "Unavailable":
+            contextualized.regional_location = country or "Eastern Africa"
+            return contextualized
+        normalized_country = (country or "").lower()
+        short_rains_country = any(
+            name in normalized_country
+            for name in ("kenya", "somalia", "uganda", "rwanda", "burundi", "tanzania")
+        )
+        season = contextualized.probabilities[0].season
+        if short_rains_country:
+            season = next(
+                (
+                    probability.season
+                    for probability in contextualized.probabilities
+                    if probability.season in {"SON", "OND", "NDJ"}
+                ),
+                season,
+            )
+        relationship, context = cls._regional_context(
+            contextualized.outlook_phase,
+            country,
+            season,
+        )
+        contextualized.regional_location = country or "Eastern Africa"
+        contextualized.regional_season = season
+        contextualized.regional_relationship = relationship
+        contextualized.eastern_africa_context = context
+        return contextualized
+
     @staticmethod
-    def unavailable(retrieved_at: datetime | None = None) -> EnsoTracker:
+    def unavailable(
+        retrieved_at: datetime | None = None,
+        country: str | None = None,
+    ) -> EnsoTracker:
         return EnsoTracker(
             status="Unavailable",
             outlook_phase="Unavailable",
@@ -181,6 +267,9 @@ class EnsoProvider:
                 "ENSO data is temporarily unavailable. Do not infer the seasonal phase from local "
                 "weather alone."
             ),
+            regional_location=country or "Eastern Africa",
+            regional_season="Unavailable",
+            regional_relationship="Not established",
             confidence="Low",
             source="NOAA Climate Prediction Center",
             source_url=PROBABILITIES_URL,

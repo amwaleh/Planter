@@ -222,6 +222,29 @@ def test_enso_provider_parses_probabilities_and_oni() -> None:
     assert tracker.latest_observation.anomaly_c == 0.67
 
 
+def test_enso_context_uses_selected_country_and_season() -> None:
+    relationship, context = EnsoProvider._regional_context(
+        "El Niño",
+        "Kenya",
+        "OND",
+    )
+
+    assert relationship == "Historically relevant"
+    assert "Kenya" in context
+    assert "short-rains" in context
+
+
+def test_enso_context_does_not_force_local_signal_for_mixed_season() -> None:
+    relationship, context = EnsoProvider._regional_context(
+        "El Niño",
+        "Ethiopia",
+        "ASO",
+    )
+
+    assert relationship == "Mixed / season-dependent"
+    assert "not strong enough for a local wet/dry conclusion" in context
+
+
 def test_assistant_rejects_questions_outside_available_evidence() -> None:
     report = SimpleNamespace(
         recent=SimpleNamespace(classification="Dry", explanation="No recent rain."),
