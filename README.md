@@ -33,6 +33,17 @@ npm run dev
 
 Open `http://localhost:5173`. The frontend expects the API at `http://localhost:8000` by default. Override it with `VITE_API_BASE_URL`.
 
+## GitHub Pages
+
+The React frontend is deployed from `main` to
+[`https://amwaleh.github.io/Planter/`](https://amwaleh.github.io/Planter/) through
+the generated `gh-pages` branch.
+
+GitHub Pages serves static files and cannot run the Python/FastAPI backend. Set the
+repository Actions variable `VITE_API_BASE_URL` to a publicly reachable backend URL
+to enable live intelligence on the hosted frontend. Without it, the interface loads
+but backend-dependent features remain unavailable.
+
 Focused application pages:
 
 - `/` — farm location and intelligence dashboard

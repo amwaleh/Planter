@@ -45,6 +45,7 @@ import {
 import { SiteFooter, SiteHeader } from "./components/SiteChrome";
 import { useLanguage } from "./i18n";
 import { EAST_AFRICA_COORDINATE_HELP, isWithinEastAfrica } from "./region";
+import { appHref } from "./routing";
 import type {
   CropAssessment,
   EnsoTracker,
@@ -740,8 +741,8 @@ export default function App() {
               <a href="#recent">Recent conditions</a>
               <a href="#advisor">Crop advisor</a>
               <a href="#climate">Rainfall and climate</a>
-              <a href={`/water?lat=${report.latitude}&lng=${report.longitude}`}>Water</a>
-              <a href={`/land?lat=${report.latitude}&lng=${report.longitude}`}>Soil and terrain</a>
+              <a href={appHref(`/water?lat=${report.latitude}&lng=${report.longitude}`)}>Water</a>
+              <a href={appHref(`/land?lat=${report.latitude}&lng=${report.longitude}`)}>Soil and terrain</a>
               <a href="#sources">Sources</a>
             </nav>
 

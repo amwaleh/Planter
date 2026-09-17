@@ -9,8 +9,9 @@ import FarmProjectsPage from "./pages/FarmProjectsPage";
 import LandPage from "./pages/LandPage";
 import LivestockPage from "./pages/LivestockPage";
 import WaterPage from "./pages/WaterPage";
+import { currentAppPath } from "./routing";
 
-const path = window.location.pathname.replace(/\/+$/, "") || "/";
+const path = currentAppPath();
 const page =
   path === "/farm-projects" ? (
     <FarmProjectsPage />
