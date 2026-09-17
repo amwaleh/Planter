@@ -10,6 +10,7 @@ import LandPage from "./pages/LandPage";
 import LivestockPage from "./pages/LivestockPage";
 import WaterPage from "./pages/WaterPage";
 import { currentAppPath } from "./routing";
+import { AuthProvider } from "./auth";
 
 const path = currentAppPath();
 const page =
@@ -31,6 +32,6 @@ const page =
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {page}
+    <AuthProvider>{page}</AuthProvider>
   </React.StrictMode>,
 );

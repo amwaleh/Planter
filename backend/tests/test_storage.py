@@ -20,6 +20,7 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
         Coordinate(latitude=-1.1, longitude=36.1),
     ]
     project = storage.save_farm_project(
+        "user-a",
         FarmProjectCreate(
             name="Demo farm",
             center_latitude=-1.03,
@@ -36,12 +37,13 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
         )
     )
 
-    loaded = storage.get_farm_project(project.id)
+    loaded = storage.get_farm_project("user-a", project.id)
     assert loaded is not None
     assert loaded.name == "Demo farm"
     assert loaded.sections[0].activity == "Planting maize"
 
     updated = storage.update_farm_project(
+        "user-a",
         project.id,
         FarmProjectCreate(
             name="Demo farm updated",
@@ -59,12 +61,59 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
         ),
     )
     assert updated is not None
-    reloaded = storage.get_farm_project(project.id)
+    reloaded = storage.get_farm_project("user-a", project.id)
     assert reloaded is not None
     assert reloaded.name == "Demo farm updated"
     assert len(reloaded.boundary) == 4
     assert reloaded.sections[0].name == "South plot"
     assert reloaded.sections[0].activity == "Grazing rotation"
+    assert storage.list_farm_projects("user-b") == []
+    assert storage.get_farm_project("user-b", project.id) is None
+    assert storage.update_farm_project(
+        "user-b",
+        project.id,
+        FarmProjectCreate(
+            name="Other user's edit",
+            center_latitude=-1.04,
+            center_longitude=36.05,
+            boundary=boundary,
+            sections=[],
+        ),
+    ) is None
+
+
+def test_storage_migration_does_not_expose_unowned_projects(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(storage, "DATABASE_PATH", tmp_path / "planter.db")
+    with storage._connect() as connection:
+        connection.execute(
+            """
+            CREATE TABLE farm_projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                center_latitude REAL NOT NULL,
+                center_longitude REAL NOT NULL,
+                boundary_json TEXT NOT NULL,
+                sections_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO farm_projects VALUES (
+                'legacy', 'Legacy farm', -1, 36, '[]', '[]',
+                '2025-01-01T00:00:00+00:00', '2025-01-01T00:00:00+00:00'
+            )
+            """
+        )
+
+    storage.initialize_storage()
+
+    assert storage.list_farm_projects("user-a") == []
 
 
 def test_custom_crop_rule_round_trip(tmp_path: Path, monkeypatch) -> None:

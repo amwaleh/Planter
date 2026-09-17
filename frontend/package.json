@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.30.0",
     "@geoman-io/leaflet-geoman-free": "^2.20.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",

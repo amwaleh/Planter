@@ -35,7 +35,30 @@ def initialize_storage() -> None:
                 boundary_json TEXT NOT NULL,
                 sections_json TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                owner_id TEXT
+            )
+            """
+        )
+        columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(farm_projects)").fetchall()
+        }
+        if "owner_id" not in columns:
+            connection.execute("ALTER TABLE farm_projects ADD COLUMN owner_id TEXT")
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_farm_projects_owner_updated
+            ON farm_projects (owner_id, updated_at DESC)
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                owner_id TEXT PRIMARY KEY,
+                display_name TEXT,
+                email TEXT,
+                last_seen_at TEXT NOT NULL
             )
             """
         )
@@ -60,7 +83,31 @@ def initialize_storage() -> None:
     load_custom_crop_rules()
 
 
-def save_farm_project(payload: FarmProjectCreate) -> FarmProject:
+def upsert_user_profile(
+    owner_id: str,
+    display_name: str | None,
+    email: str | None,
+) -> None:
+    with _connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO user_profiles (owner_id, display_name, email, last_seen_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(owner_id) DO UPDATE SET
+                display_name = excluded.display_name,
+                email = excluded.email,
+                last_seen_at = excluded.last_seen_at
+            """,
+            (
+                owner_id,
+                display_name,
+                email,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+
+
+def save_farm_project(owner_id: str, payload: FarmProjectCreate) -> FarmProject:
     now = datetime.now(timezone.utc)
     project = FarmProject(
         id=str(uuid4()),
@@ -73,8 +120,8 @@ def save_farm_project(payload: FarmProjectCreate) -> FarmProject:
             """
             INSERT INTO farm_projects (
                 id, name, center_latitude, center_longitude,
-                boundary_json, sections_json, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                boundary_json, sections_json, created_at, updated_at, owner_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 project.id,
@@ -85,16 +132,21 @@ def save_farm_project(payload: FarmProjectCreate) -> FarmProject:
                 json.dumps([section.model_dump() for section in project.sections]),
                 project.created_at.isoformat(),
                 project.updated_at.isoformat(),
+                owner_id,
             ),
         )
     return project
 
 
-def update_farm_project(project_id: str, payload: FarmProjectCreate) -> FarmProject | None:
+def update_farm_project(
+    owner_id: str,
+    project_id: str,
+    payload: FarmProjectCreate,
+) -> FarmProject | None:
     with _connect() as connection:
         existing = connection.execute(
-            "SELECT created_at FROM farm_projects WHERE id = ?",
-            (project_id,),
+            "SELECT created_at FROM farm_projects WHERE id = ? AND owner_id = ?",
+            (project_id, owner_id),
         ).fetchone()
         if existing is None:
             return None
@@ -109,7 +161,7 @@ def update_farm_project(project_id: str, payload: FarmProjectCreate) -> FarmProj
             UPDATE farm_projects
             SET name = ?, center_latitude = ?, center_longitude = ?,
                 boundary_json = ?, sections_json = ?, updated_at = ?
-            WHERE id = ?
+            WHERE id = ? AND owner_id = ?
             """,
             (
                 project.name,
@@ -119,23 +171,30 @@ def update_farm_project(project_id: str, payload: FarmProjectCreate) -> FarmProj
                 json.dumps([section.model_dump() for section in project.sections]),
                 project.updated_at.isoformat(),
                 project.id,
+                owner_id,
             ),
         )
     return project
 
 
-def list_farm_projects() -> list[FarmProject]:
+def list_farm_projects(owner_id: str) -> list[FarmProject]:
     with _connect() as connection:
         rows = connection.execute(
-            "SELECT * FROM farm_projects ORDER BY updated_at DESC"
+            """
+            SELECT * FROM farm_projects
+            WHERE owner_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (owner_id,),
         ).fetchall()
     return [_project_from_row(row) for row in rows]
 
 
-def get_farm_project(project_id: str) -> FarmProject | None:
+def get_farm_project(owner_id: str, project_id: str) -> FarmProject | None:
     with _connect() as connection:
         row = connection.execute(
-            "SELECT * FROM farm_projects WHERE id = ?", (project_id,)
+            "SELECT * FROM farm_projects WHERE id = ? AND owner_id = ?",
+            (project_id, owner_id),
         ).fetchone()
     return _project_from_row(row) if row else None
 

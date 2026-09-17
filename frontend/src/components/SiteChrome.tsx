@@ -1,9 +1,11 @@
 import { Leaf } from "lucide-react";
 import { useLanguage } from "../i18n";
 import { appHref } from "../routing";
+import { useAuth } from "../auth-context";
 
 export function SiteHeader() {
   const { language, t, changeLanguage } = useLanguage();
+  const { account, configured, initializing, signIn, signOut } = useAuth();
   return (
     <header className="site-header">
       <a className="brand" href={appHref()} aria-label="Planter home">
@@ -21,14 +23,30 @@ export function SiteHeader() {
         <a href={appHref("/livestock")}>{t("livestock")}</a>
         <a href={appHref("/assistant")}>{t("assistant")}</a>
       </nav>
-      <button
-        className="language-button"
-        type="button"
-        onClick={() => changeLanguage(language === "en" ? "sw" : "en")}
-        aria-label="Change language"
-      >
-        {language === "en" ? "SW" : "EN"}
-      </button>
+      <div className="header-actions">
+        {configured && !initializing && (
+          account ? (
+            <>
+              <span className="account-name">{account.name ?? account.username}</span>
+              <button className="auth-button" type="button" onClick={() => void signOut()}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <button className="auth-button" type="button" onClick={() => void signIn()}>
+              Sign in
+            </button>
+          )
+        )}
+        <button
+          className="language-button"
+          type="button"
+          onClick={() => changeLanguage(language === "en" ? "sw" : "en")}
+          aria-label="Change language"
+        >
+          {language === "en" ? "SW" : "EN"}
+        </button>
+      </div>
     </header>
   );
 }

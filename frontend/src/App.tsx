@@ -412,8 +412,8 @@ export default function App() {
   const [longitude, setLongitude] = useState(defaultLocation.longitude);
   const [latitudeInput, setLatitudeInput] = useState(latitude.toFixed(4));
   const [longitudeInput, setLongitudeInput] = useState(longitude.toFixed(4));
-  const [crop, setCrop] = useState("onion");
-  const [cropInput, setCropInput] = useState("onion");
+  const [crop, setCrop] = useState<string | null>(null);
+  const [cropInput, setCropInput] = useState("");
   const [cropOptions, setCropOptions] = useState(fallbackCrops);
   const [placeQuery, setPlaceQuery] = useState("");
   const [matches, setMatches] = useState<LocationMatch[]>([]);
@@ -423,11 +423,16 @@ export default function App() {
   const [report, setReport] = useState<FarmReport | null>(null);
   const [ensoTracker, setEnsoTracker] = useState<EnsoTracker | null>(null);
   const [ensoLoading, setEnsoLoading] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reportCountry = report ? report.location.country : undefined;
 
   const loadReport = useCallback(async () => {
+    if (!crop) {
+      setReport(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {

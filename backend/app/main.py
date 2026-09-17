@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import HTTPError
 
 from .crop_catalog import list_crop_catalog, resolve_catalog_name
+from .auth import AuthenticatedUser, get_current_user
 from .crop_data import CROP_RULES, crop_display_name, resolve_crop_name
 from .intelligence import (
     answer_farm_question,
@@ -54,6 +55,7 @@ from .storage import (
     update_farm_project,
     get_crop_image,
     save_crop_image,
+    upsert_user_profile,
 )
 
 
@@ -329,29 +331,42 @@ async def create_crop_rule(payload: CropRuleCreate) -> CropRuleRecord:
 
 
 @app.get("/api/v1/projects", response_model=list[FarmProject])
-async def projects() -> list[FarmProject]:
-    return list_farm_projects()
+async def projects(
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> list[FarmProject]:
+    upsert_user_profile(user.subject, user.display_name, user.email)
+    return list_farm_projects(user.subject)
 
 
 @app.post("/api/v1/projects", response_model=FarmProject, status_code=201)
-async def create_project(payload: FarmProjectCreate) -> FarmProject:
-    return save_farm_project(payload)
+async def create_project(
+    payload: FarmProjectCreate,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> FarmProject:
+    upsert_user_profile(user.subject, user.display_name, user.email)
+    return save_farm_project(user.subject, payload)
 
 
 @app.put("/api/v1/projects/{project_id}", response_model=FarmProject)
 async def update_project(
     project_id: str,
     payload: FarmProjectCreate,
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> FarmProject:
-    saved_project = update_farm_project(project_id, payload)
+    upsert_user_profile(user.subject, user.display_name, user.email)
+    saved_project = update_farm_project(user.subject, project_id, payload)
     if saved_project is None:
         raise HTTPException(status_code=404, detail="Farm project was not found.")
     return saved_project
 
 
 @app.get("/api/v1/projects/{project_id}", response_model=FarmProject)
-async def project(project_id: str) -> FarmProject:
-    saved_project = get_farm_project(project_id)
+async def project(
+    project_id: str,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> FarmProject:
+    upsert_user_profile(user.subject, user.display_name, user.email)
+    saved_project = get_farm_project(user.subject, project_id)
     if saved_project is None:
         raise HTTPException(status_code=404, detail="Farm project was not found.")
     return saved_project

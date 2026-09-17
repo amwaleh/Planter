@@ -29,6 +29,7 @@ import {
 import { createProject, getCrops, getProjects, updateProject } from "../api";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
 import type { Coordinate, FarmProject, FarmSection } from "../types";
+import { useAuth } from "../auth-context";
 
 type DrawKind = "farm" | "section";
 interface DrawRequest {
@@ -315,6 +316,7 @@ function ProjectMap({
 }
 
 export default function FarmProjectsPage() {
+  const { account, configured, initializing, signIn, getAccessToken } = useAuth();
   const [latitude, setLatitude] = useState(-0.7167);
   const [longitude, setLongitude] = useState(36.4333);
   const [locationMode, setLocationMode] = useState(false);
@@ -336,9 +338,21 @@ export default function FarmProjectsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void getProjects().then(setProjects).catch(() => setMessage("Saved farms could not be loaded."));
     void getCrops().then(setCropOptions).catch(() => setCropOptions([]));
   }, []);
+
+  useEffect(() => {
+    if (!account) {
+      setProjects([]);
+      return;
+    }
+    void getAccessToken()
+      .then(getProjects)
+      .then(setProjects)
+      .catch((error) =>
+        setMessage(error instanceof Error ? error.message : "Saved farms could not be loaded."),
+      );
+  }, [account, getAccessToken]);
 
   const setCenter = useCallback((nextLatitude: number, nextLongitude: number) => {
     setLatitude(nextLatitude);
@@ -424,9 +438,10 @@ export default function FarmProjectsPage() {
     };
     try {
       setSaving(true);
+      const accessToken = await getAccessToken();
       const saved = activeProjectId
-        ? await updateProject(activeProjectId, payload)
-        : await createProject(payload);
+        ? await updateProject(activeProjectId, payload, accessToken)
+        : await createProject(payload, accessToken);
       setActiveProjectId(saved.id);
       setProjects((current) => {
         const remaining = current.filter((project) => project.id !== saved.id);
@@ -475,6 +490,42 @@ export default function FarmProjectsPage() {
       ),
     );
   }, []);
+
+  if (initializing) {
+    return (
+      <main>
+        <SiteHeader />
+        <section className="auth-gate"><p>Checking your sign-in...</p></section>
+        <SiteFooter />
+      </main>
+    );
+  }
+
+  if (!configured || !account) {
+    return (
+      <main>
+        <SiteHeader />
+        <section className="auth-gate">
+          <p className="kicker">Private farm workspace</p>
+          <h1>Sign in to save and manage farm projects.</h1>
+          <p>
+            Your farm boundaries, sections, and activities are private to your account.
+            Google and Facebook sign-in are provided through Microsoft Entra External ID.
+          </p>
+          {configured ? (
+            <button className="primary-button" type="button" onClick={() => void signIn()}>
+              Sign in with Google or Facebook
+            </button>
+          ) : (
+            <p className="form-message">
+              Federated sign-in is not configured for this deployment yet.
+            </p>
+          )}
+        </section>
+        <SiteFooter />
+      </main>
+    );
+  }
 
   return (
     <main>

@@ -6,10 +6,19 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app import storage
+from app.auth import AuthenticatedUser, get_current_user
 from app.main import app
 from app.models import EnsoTracker, MapLinkResolution, SoilIntelligence
 
 client = TestClient(app)
+
+
+def authenticated_as(subject: str) -> None:
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        subject=subject,
+        display_name=f"User {subject}",
+        email=f"{subject}@example.com",
+    )
 
 
 def test_local_review_origin_is_allowed() -> None:
@@ -80,6 +89,7 @@ def test_project_api_create_update_and_reload(
 ) -> None:
     monkeypatch.setattr(storage, "DATABASE_PATH", tmp_path / "planter.db")
     storage.initialize_storage()
+    authenticated_as("user-a")
     boundary = [
         {"latitude": -1.0, "longitude": 36.0},
         {"latitude": -1.0, "longitude": 36.1},
@@ -133,6 +143,32 @@ def test_project_api_create_update_and_reload(
     assert reloaded.json()["boundary"] == updated_boundary
     assert reloaded.json()["sections"][0]["name"] == "South field"
     assert reloaded.json()["sections"][0]["activity"] == "Drip-irrigated vegetables"
+
+    authenticated_as("user-b")
+    assert client.get("/api/v1/projects").json() == []
+    assert client.get(f"/api/v1/projects/{project_id}").status_code == 404
+    assert client.put(
+        f"/api/v1/projects/{project_id}",
+        json={
+            "name": "Stolen farm",
+            "center_latitude": -1.04,
+            "center_longitude": 36.05,
+            "boundary": updated_boundary,
+            "sections": [],
+        },
+    ).status_code == 404
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_project_api_requires_authentication(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(storage, "DATABASE_PATH", tmp_path / "planter.db")
+    storage.initialize_storage()
+    app.dependency_overrides.pop(get_current_user, None)
+
+    response = client.get("/api/v1/projects")
+
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
 
 
 def test_land_endpoint_returns_explicit_state_when_elevation_fails() -> None:

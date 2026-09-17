@@ -85,18 +85,28 @@ export async function resolveMapLink(link: string): Promise<MapLinkResolution> {
   return response.json() as Promise<MapLinkResolution>;
 }
 
-export async function getProjects(): Promise<FarmProject[]> {
-  const response = await fetch(apiUrl("/api/v1/projects"));
+function authenticatedHeaders(accessToken: string, includeJson = false): HeadersInit {
+  return {
+    Authorization: `Bearer ${accessToken}`,
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+  };
+}
+
+export async function getProjects(accessToken: string): Promise<FarmProject[]> {
+  const response = await fetch(apiUrl("/api/v1/projects"), {
+    headers: authenticatedHeaders(accessToken),
+  });
   if (!response.ok) throw new Error("Saved farms could not be loaded.");
   return response.json() as Promise<FarmProject[]>;
 }
 
 export async function createProject(
   project: FarmProjectInput,
+  accessToken: string,
 ): Promise<FarmProject> {
   const response = await fetch(apiUrl("/api/v1/projects"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authenticatedHeaders(accessToken, true),
     body: JSON.stringify(project),
   });
   if (!response.ok) {
@@ -109,10 +119,11 @@ export async function createProject(
 export async function updateProject(
   projectId: string,
   project: FarmProjectInput,
+  accessToken: string,
 ): Promise<FarmProject> {
   const response = await fetch(apiUrl(`/api/v1/projects/${projectId}`), {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: authenticatedHeaders(accessToken, true),
     body: JSON.stringify(project),
   });
   if (!response.ok) {
