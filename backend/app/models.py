@@ -109,6 +109,9 @@ class EnsoTracker(BaseModel):
     pacific_map_url: HttpUrl
     pacific_map_source_url: HttpUrl
     pacific_map_description: str
+    iod_map_url: HttpUrl
+    iod_map_source_url: HttpUrl
+    iod_map_description: str
     stale: bool = False
     limitations: list[str] = Field(default_factory=list)
 

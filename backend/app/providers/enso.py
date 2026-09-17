@@ -21,6 +21,14 @@ PACIFIC_MAP_SOURCE_URL = (
     "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/"
     "enso_update/sstanim.shtml"
 )
+IOD_MAP_URL = (
+    "https://www.cpc.ncep.noaa.gov/products/international/"
+    "oisst/oisst_7day_ind_anom.gif"
+)
+IOD_MAP_SOURCE_URL = (
+    "https://www.cpc.ncep.noaa.gov/products/international/ocean_monitoring/"
+    "indian/IO_monitoring_fcsts/io_index.shtml"
+)
 
 ISSUED_PATTERN = re.compile(r"<h2>\s*Issued\s+([^<]+)</h2>", re.IGNORECASE)
 PROBABILITY_ROW_PATTERN = re.compile(
@@ -145,6 +153,13 @@ class EnsoProvider:
                 "NOAA weekly sea-surface-temperature anomaly animation for the tropical "
                 "Pacific. Persistent warm anomalies in the central and eastern equatorial "
                 "Pacific are the oceanic footprint associated with El Niño."
+            ),
+            iod_map_url=IOD_MAP_URL,
+            iod_map_source_url=IOD_MAP_SOURCE_URL,
+            iod_map_description=(
+                "NOAA seven-day Indian Ocean sea-surface-temperature anomaly map. "
+                "A positive IOD pattern is warmer in the western Indian Ocean and cooler "
+                "near Indonesia; a negative pattern reverses that gradient."
             ),
             limitations=[
                 "ENSO describes tropical Pacific conditions and changes seasonal odds; it is not a farm-level rainfall forecast.",
@@ -294,6 +309,11 @@ class EnsoProvider:
             pacific_map_source_url=PACIFIC_MAP_SOURCE_URL,
             pacific_map_description=(
                 "NOAA tropical Pacific sea-surface-temperature anomaly map."
+            ),
+            iod_map_url=IOD_MAP_URL,
+            iod_map_source_url=IOD_MAP_SOURCE_URL,
+            iod_map_description=(
+                "NOAA seven-day Indian Ocean sea-surface-temperature anomaly map."
             ),
             limitations=["No ENSO values were substituted while the provider was unavailable."],
         )

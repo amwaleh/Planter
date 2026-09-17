@@ -273,6 +273,9 @@ def test_enso_endpoint_returns_normalized_tracker() -> None:
         pacific_map_url="https://www.cpc.ncep.noaa.gov/map.gif",
         pacific_map_source_url="https://www.cpc.ncep.noaa.gov/",
         pacific_map_description="Tropical Pacific anomaly map.",
+        iod_map_url="https://www.cpc.ncep.noaa.gov/iod-map.gif",
+        iod_map_source_url="https://www.cpc.ncep.noaa.gov/iod/",
+        iod_map_description="Indian Ocean anomaly map.",
         limitations=["Not a local rainfall forecast."],
     )
     with patch(
@@ -284,3 +287,4 @@ def test_enso_endpoint_returns_normalized_tracker() -> None:
     assert response.status_code == 200
     assert response.json()["outlook_phase"] == "El Niño"
     assert response.json()["probabilities"][0]["el_nino_percent"] == 95
+    assert response.json()["iod_map_url"].endswith("iod-map.gif")

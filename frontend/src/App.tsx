@@ -99,20 +99,6 @@ function MapPicker({
   return <Marker position={[latitude, longitude]} icon={markerIcon} />;
 }
 
-function ReadOnlyMapFocus({
-  latitude,
-  longitude,
-}: {
-  latitude: number;
-  longitude: number;
-}) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([latitude, longitude], map.getZoom());
-  }, [latitude, longitude, map]);
-  return <Marker position={[latitude, longitude]} icon={markerIcon} />;
-}
-
 function MetricCard({
   icon,
   eyebrow,
@@ -209,17 +195,15 @@ function AssessmentPanel({ assessment }: { assessment: CropAssessment }) {
 function EnsoPanel({
   tracker,
   loading,
-  latitude,
-  longitude,
 }: {
   tracker: EnsoTracker | null;
   loading: boolean;
-  latitude: number;
-  longitude: number;
 }) {
-  const [mapView, setMapView] = useState<"pacific" | "regional">("pacific");
+  const [mapView, setMapView] = useState<"pacific" | "iod">("pacific");
   const [pacificMapLoading, setPacificMapLoading] = useState(true);
   const [pacificMapError, setPacificMapError] = useState(false);
+  const [iodMapLoading, setIodMapLoading] = useState(true);
+  const [iodMapError, setIodMapError] = useState(false);
   const seasonNames: Record<string, string> = {
     ASO: "Aug–Sep–Oct",
     SON: "Sep–Oct–Nov",
@@ -319,8 +303,8 @@ function EnsoPanel({
         </div>
       </div>
       <details className="enso-map-details" open>
-        <summary>View ENSO and regional maps</summary>
-        <div className="enso-map-tabs" role="tablist" aria-label="ENSO map views">
+        <summary>View Pacific and Indian Ocean maps</summary>
+        <div className="enso-map-tabs" role="tablist" aria-label="Ocean climate map views">
           <button
             type="button"
             role="tab"
@@ -333,18 +317,18 @@ function EnsoPanel({
           <button
             type="button"
             role="tab"
-            aria-selected={mapView === "regional"}
-            className={mapView === "regional" ? "active" : ""}
-            onClick={() => setMapView("regional")}
+            aria-selected={mapView === "iod"}
+            className={mapView === "iod" ? "active" : ""}
+            onClick={() => setMapView("iod")}
           >
-            Eastern Africa relevance
+            Indian Ocean Dipole
           </button>
         </div>
         {mapView === "pacific" ? (
           <div className="enso-map-view" role="tabpanel">
             <h3>Where El Niño develops</h3>
             <p>{tracker.pacific_map_description}</p>
-            <div className="enso-pacific-map">
+            <div className="enso-ocean-map">
               {pacificMapLoading && !pacificMapError && (
                 <div className="enso-map-loading"><LoaderCircle className="spin" /> Loading NOAA map...</div>
               )}
@@ -372,28 +356,34 @@ function EnsoPanel({
           </div>
         ) : (
           <div className="enso-map-view" role="tabpanel">
-            <h3>{tracker.regional_location} seasonal relevance</h3>
-            <p>
-              {tracker.regional_season}: <strong>{tracker.regional_relationship}</strong>
-            </p>
-            <MapContainer
-              center={[latitude, longitude]}
-              zoom={5}
-              scrollWheelZoom
-              className="enso-regional-map"
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <ReadOnlyMapFocus latitude={latitude} longitude={longitude} />
-            </MapContainer>
-            <p>{tracker.eastern_africa_context}</p>
+            <h3>Indian Ocean Dipole conditions</h3>
+            <p>{tracker.iod_map_description}</p>
+            <div className="enso-ocean-map">
+              {iodMapLoading && !iodMapError && (
+                <div className="enso-map-loading"><LoaderCircle className="spin" /> Loading NOAA map...</div>
+              )}
+              {iodMapError ? (
+                <div className="state-message error">The NOAA Indian Ocean anomaly map is temporarily unavailable.</div>
+              ) : (
+                <img
+                  src={tracker.iod_map_url}
+                  alt="NOAA map of seven-day Indian Ocean sea-surface-temperature anomalies"
+                  onLoad={() => setIodMapLoading(false)}
+                  onError={() => {
+                    setIodMapLoading(false);
+                    setIodMapError(true);
+                  }}
+                />
+              )}
+            </div>
             <p className="responsible-note">
-              This map locates the selected farm and reports the documented regional relationship.
-              It is not a synthetic rainfall heatmap. An ICPAC probability raster should only be
-              added when a stable authoritative map service is available.
+              Positive IOD: warmer western Indian Ocean and cooler waters near Indonesia. Negative
+              IOD: the pattern reverses. This map is ocean evidence, not a deterministic rainfall
+              forecast or an automatic IOD phase classification.
             </p>
+            <a href={tracker.iod_map_source_url} target="_blank" rel="noreferrer">
+              Open the NOAA Indian Ocean source
+            </a>
           </div>
         )}
       </details>
@@ -816,8 +806,6 @@ export default function App() {
             <EnsoPanel
               tracker={ensoTracker}
               loading={ensoLoading}
-              latitude={report.latitude}
-              longitude={report.longitude}
             />
 
             <div className="content-grid" id="advisor">
