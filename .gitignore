@@ -19,3 +19,4 @@ backend/data/*.db
 .idea/
 .vscode/
 .DS_Store
+.copilot-azure/
