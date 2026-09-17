@@ -1,6 +1,6 @@
 from app.crop_data import CROP_RULES, resolve_crop_name
 from app.models import ClimateMonth
-from app.scoring import assess_crop, category_for, range_score
+from app.scoring import assess_crop, category_for, range_score, rank_crops
 
 
 def climate(rainfall: float = 70, temperature: float = 23) -> list[ClimateMonth]:
@@ -29,7 +29,8 @@ def climate(rainfall: float = 70, temperature: float = 23) -> list[ClimateMonth]
 
 def test_range_score_rewards_preferred_values() -> None:
     assert range_score(20, (15, 25), 10) == 100
-    assert range_score(10, (15, 25), 10) == 50
+    assert range_score(15, (15, 25), 10) == 85
+    assert range_score(10, (15, 25), 10) == 42
     assert range_score(0, (15, 25), 10) == 0
 
 
@@ -72,3 +73,12 @@ def test_unknown_crop_is_not_invented() -> None:
     assert crop is None
     assert corrected is False
     assert suggestions == []
+
+
+def test_location_wide_ranking_changes_with_climate_and_elevation() -> None:
+    cool_highland = rank_crops("", climate(rainfall=130, temperature=17), 2200)
+    hot_dry_lowland = rank_crops("", climate(rainfall=30, temperature=29), 300)
+
+    assert cool_highland[0].crop != "onion"
+    assert hot_dry_lowland[0].crop != "onion"
+    assert cool_highland[0].crop != hot_dry_lowland[0].crop

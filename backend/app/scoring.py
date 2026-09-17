@@ -6,10 +6,13 @@ from .models import ClimateMonth, CropAssessment
 
 def range_score(value: float, preferred: tuple[float, float], tolerance: float) -> int:
     low, high = preferred
+    midpoint = (low + high) / 2
+    half_range = max((high - low) / 2, 0.1)
     if low <= value <= high:
-        return 100
+        distance_from_midpoint = abs(value - midpoint) / half_range
+        return round(100 - 15 * distance_from_midpoint)
     distance = low - value if value < low else value - high
-    return max(0, round(100 * (1 - distance / tolerance)))
+    return max(0, round(85 * (1 - distance / tolerance)))
 
 
 def category_for(score: int) -> str:
@@ -107,7 +110,7 @@ def assess_crop(
         component_scores=components,
         planting_guidance=rule.planting_guidance,
         harvest_guidance=f"Typically about {duration_midpoint} days after planting; variety and field conditions change this.",
-        method="Weighted climate/elevation rule v0.1",
+        method="Weighted climate/elevation rule v0.2 with graded fit inside preferred ranges",
         confidence_explanation=confidence_explanation,
         what_to_verify=[
             "Laboratory or extension-supported soil test",
