@@ -270,6 +270,9 @@ def test_enso_endpoint_returns_normalized_tracker() -> None:
         source_url="https://www.cpc.ncep.noaa.gov/",
         regional_source="ICPAC",
         regional_source_url="https://www.icpac.net/seasonal-forecast/",
+        pacific_map_url="https://www.cpc.ncep.noaa.gov/map.gif",
+        pacific_map_source_url="https://www.cpc.ncep.noaa.gov/",
+        pacific_map_description="Tropical Pacific anomaly map.",
         limitations=["Not a local rainfall forecast."],
     )
     with patch(

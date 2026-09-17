@@ -13,6 +13,14 @@ PROBABILITIES_URL = (
 )
 ONI_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
 ICPAC_URL = "https://www.icpac.net/seasonal-forecast/"
+PACIFIC_MAP_URL = (
+    "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/"
+    "enso_update/sstaanim.gif"
+)
+PACIFIC_MAP_SOURCE_URL = (
+    "https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/"
+    "enso_update/sstanim.shtml"
+)
 
 ISSUED_PATTERN = re.compile(r"<h2>\s*Issued\s+([^<]+)</h2>", re.IGNORECASE)
 PROBABILITY_ROW_PATTERN = re.compile(
@@ -131,6 +139,13 @@ class EnsoProvider:
             source_url=PROBABILITIES_URL,
             regional_source="IGAD Climate Prediction and Applications Centre (ICPAC)",
             regional_source_url=ICPAC_URL,
+            pacific_map_url=PACIFIC_MAP_URL,
+            pacific_map_source_url=PACIFIC_MAP_SOURCE_URL,
+            pacific_map_description=(
+                "NOAA weekly sea-surface-temperature anomaly animation for the tropical "
+                "Pacific. Persistent warm anomalies in the central and eastern equatorial "
+                "Pacific are the oceanic footprint associated with El Niño."
+            ),
             limitations=[
                 "ENSO describes tropical Pacific conditions and changes seasonal odds; it is not a farm-level rainfall forecast.",
                 "Eastern Africa impacts vary by country, sub-region, rainfall season, and other climate drivers.",
@@ -275,5 +290,10 @@ class EnsoProvider:
             source_url=PROBABILITIES_URL,
             regional_source="IGAD Climate Prediction and Applications Centre (ICPAC)",
             regional_source_url=ICPAC_URL,
+            pacific_map_url=PACIFIC_MAP_URL,
+            pacific_map_source_url=PACIFIC_MAP_SOURCE_URL,
+            pacific_map_description=(
+                "NOAA tropical Pacific sea-surface-temperature anomaly map."
+            ),
             limitations=["No ENSO values were substituted while the provider was unavailable."],
         )

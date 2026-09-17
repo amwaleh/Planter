@@ -99,6 +99,20 @@ function MapPicker({
   return <Marker position={[latitude, longitude]} icon={markerIcon} />;
 }
 
+function ReadOnlyMapFocus({
+  latitude,
+  longitude,
+}: {
+  latitude: number;
+  longitude: number;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([latitude, longitude], map.getZoom());
+  }, [latitude, longitude, map]);
+  return <Marker position={[latitude, longitude]} icon={markerIcon} />;
+}
+
 function MetricCard({
   icon,
   eyebrow,
@@ -195,10 +209,17 @@ function AssessmentPanel({ assessment }: { assessment: CropAssessment }) {
 function EnsoPanel({
   tracker,
   loading,
+  latitude,
+  longitude,
 }: {
   tracker: EnsoTracker | null;
   loading: boolean;
+  latitude: number;
+  longitude: number;
 }) {
+  const [mapView, setMapView] = useState<"pacific" | "regional">("pacific");
+  const [pacificMapLoading, setPacificMapLoading] = useState(true);
+  const [pacificMapError, setPacificMapError] = useState(false);
   const seasonNames: Record<string, string> = {
     ASO: "Aug–Sep–Oct",
     SON: "Sep–Oct–Nov",
@@ -297,6 +318,85 @@ function EnsoPanel({
           <span><i className="enso-el-nino" />El Niño</span>
         </div>
       </div>
+      <details className="enso-map-details">
+        <summary>View ENSO and regional maps</summary>
+        <div className="enso-map-tabs" role="tablist" aria-label="ENSO map views">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mapView === "pacific"}
+            className={mapView === "pacific" ? "active" : ""}
+            onClick={() => setMapView("pacific")}
+          >
+            Pacific conditions
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mapView === "regional"}
+            className={mapView === "regional" ? "active" : ""}
+            onClick={() => setMapView("regional")}
+          >
+            Eastern Africa relevance
+          </button>
+        </div>
+        {mapView === "pacific" ? (
+          <div className="enso-map-view" role="tabpanel">
+            <h3>Where El Niño develops</h3>
+            <p>{tracker.pacific_map_description}</p>
+            <div className="enso-pacific-map">
+              {pacificMapLoading && !pacificMapError && (
+                <div className="enso-map-loading"><LoaderCircle className="spin" /> Loading NOAA map...</div>
+              )}
+              {pacificMapError ? (
+                <div className="state-message error">The NOAA Pacific anomaly map is temporarily unavailable.</div>
+              ) : (
+                <img
+                  src={tracker.pacific_map_url}
+                  alt="NOAA animated heatmap of weekly tropical Pacific sea-surface-temperature anomalies"
+                  onLoad={() => setPacificMapLoading(false)}
+                  onError={() => {
+                    setPacificMapLoading(false);
+                    setPacificMapError(true);
+                  }}
+                />
+              )}
+            </div>
+            <p className="responsible-note">
+              Warm red or orange ocean anomalies in the central/eastern equatorial Pacific show
+              the El Niño footprint. This is not a rainfall map for Eastern Africa.
+            </p>
+            <a href={tracker.pacific_map_source_url} target="_blank" rel="noreferrer">
+              Open the NOAA source
+            </a>
+          </div>
+        ) : (
+          <div className="enso-map-view" role="tabpanel">
+            <h3>{tracker.regional_location} seasonal relevance</h3>
+            <p>
+              {tracker.regional_season}: <strong>{tracker.regional_relationship}</strong>
+            </p>
+            <MapContainer
+              center={[latitude, longitude]}
+              zoom={5}
+              scrollWheelZoom
+              className="enso-regional-map"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <ReadOnlyMapFocus latitude={latitude} longitude={longitude} />
+            </MapContainer>
+            <p>{tracker.eastern_africa_context}</p>
+            <p className="responsible-note">
+              This map locates the selected farm and reports the documented regional relationship.
+              It is not a synthetic rainfall heatmap. An ICPAC probability raster should only be
+              added when a stable authoritative map service is available.
+            </p>
+          </div>
+        )}
+      </details>
       <details className="methodology">
         <summary>Sources and limitations</summary>
         <p>
@@ -712,7 +812,12 @@ export default function App() {
                 <p className="chart-summary">{report.rainfall_comparison.summary}</p>
                 <p className="chart-summary">The current month is partial and is excluded from the year-to-date comparison.</p>
               </section>
-              <EnsoPanel tracker={ensoTracker} loading={ensoLoading} />
+              <EnsoPanel
+                tracker={ensoTracker}
+                loading={ensoLoading}
+                latitude={report.latitude}
+                longitude={report.longitude}
+              />
             </div>
 
             <div className="content-grid" id="advisor">

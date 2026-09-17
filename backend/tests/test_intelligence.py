@@ -220,6 +220,7 @@ def test_enso_provider_parses_probabilities_and_oni() -> None:
     assert tracker.observed_phase == "El Niño signal"
     assert tracker.probabilities[0].el_nino_percent == 100
     assert tracker.latest_observation.anomaly_c == 0.67
+    assert str(tracker.pacific_map_url).endswith("sstaanim.gif")
 
 
 def test_enso_context_uses_selected_country_and_season() -> None:

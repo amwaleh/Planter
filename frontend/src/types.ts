@@ -92,6 +92,9 @@ export interface EnsoTracker {
   source_url: string;
   regional_source: string;
   regional_source_url: string;
+  pacific_map_url: string;
+  pacific_map_source_url: string;
+  pacific_map_description: string;
   stale: boolean;
   limitations: string[];
 }
