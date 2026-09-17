@@ -7,7 +7,7 @@ import pytest
 
 from app import storage
 from app.main import app
-from app.models import MapLinkResolution, SoilIntelligence
+from app.models import EnsoTracker, MapLinkResolution, SoilIntelligence
 
 client = TestClient(app)
 
@@ -238,3 +238,43 @@ def test_land_endpoint_rejects_location_outside_eastern_africa() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_enso_endpoint_returns_normalized_tracker() -> None:
+    tracker = EnsoTracker(
+        status="Available",
+        outlook_phase="El Niño",
+        observed_phase="El Niño signal",
+        issued="September 2026",
+        retrieved_at="2026-09-17T08:00:00Z",
+        latest_observation={
+            "season": "JJA",
+            "year": 2026,
+            "anomaly_c": 0.7,
+        },
+        observations=[],
+        probabilities=[
+            {
+                "season": "OND",
+                "la_nina_percent": 0,
+                "neutral_percent": 5,
+                "el_nino_percent": 95,
+            }
+        ],
+        eastern_africa_context="Confirm the regional seasonal outlook.",
+        confidence="Medium",
+        source="NOAA Climate Prediction Center",
+        source_url="https://www.cpc.ncep.noaa.gov/",
+        regional_source="ICPAC",
+        regional_source_url="https://www.icpac.net/seasonal-forecast/",
+        limitations=["Not a local rainfall forecast."],
+    )
+    with patch(
+        "app.main.enso_provider.fetch",
+        new=AsyncMock(return_value=tracker),
+    ):
+        response = client.get("/api/v1/enso")
+
+    assert response.status_code == 200
+    assert response.json()["outlook_phase"] == "El Niño"
+    assert response.json()["probabilities"][0]["el_nino_percent"] == 95

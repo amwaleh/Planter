@@ -23,6 +23,7 @@ from .models import (
     FarmProject,
     FarmProjectCreate,
     FarmReport,
+    EnsoTracker,
     LandIntelligence,
     LivestockReport,
     LocationMatch,
@@ -32,6 +33,7 @@ from .models import (
 )
 from .providers.location import NominatimLocationProvider
 from .providers.land import SoilGridsSoilProvider
+from .providers.enso import EnsoProvider
 from .providers.open_meteo import OpenMeteoProvider
 from .providers.water import OpenStreetMapWaterProvider
 from .providers.wikimedia import WikimediaImageProvider
@@ -81,6 +83,7 @@ location_provider = NominatimLocationProvider()
 water_provider = OpenStreetMapWaterProvider()
 image_provider = WikimediaImageProvider()
 soil_provider = SoilGridsSoilProvider()
+enso_provider = EnsoProvider()
 
 
 @app.get("/health")
@@ -139,6 +142,11 @@ async def farm_report(
 @app.get("/api/v1/provider-health", response_model=list[ProviderHealth])
 async def provider_health() -> list[ProviderHealth]:
     return [provider.health()]
+
+
+@app.get("/api/v1/enso", response_model=EnsoTracker)
+async def enso() -> EnsoTracker:
+    return await enso_provider.fetch()
 
 
 @app.get("/api/v1/land-intelligence", response_model=LandIntelligence)

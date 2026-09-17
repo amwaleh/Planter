@@ -1631,6 +1631,134 @@ nav a {
   line-height: 1.55;
 }
 
+.enso-panel {
+  min-width: 0;
+}
+
+.enso-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.enso-phase,
+.enso-outlook-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.enso-el-nino {
+  background: #d95b43;
+}
+
+.enso-la-nina {
+  background: #3975a8;
+}
+
+.enso-neutral {
+  background: #aab0aa;
+}
+
+.enso-phase.enso-el-nino {
+  color: #7f2e20;
+  background: #f5d6ce;
+}
+
+.enso-phase.enso-la-nina {
+  color: #214f75;
+  background: #d6e5f1;
+}
+
+.enso-phase.enso-neutral {
+  color: #4c554e;
+  background: #e5e9e5;
+}
+
+.enso-outlook-badge {
+  margin-bottom: 14px;
+  color: #214f75;
+  background: #dcebf4;
+}
+
+.enso-chart {
+  height: 210px;
+  margin: 14px 0;
+}
+
+.enso-probabilities {
+  display: grid;
+  gap: 7px;
+}
+
+.enso-probability-row {
+  display: grid;
+  grid-template-columns: 38px minmax(120px, 1fr) 125px;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.enso-probability-bar {
+  display: flex;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf0ed;
+}
+
+.enso-probability-bar span {
+  display: block;
+  height: 100%;
+}
+
+.enso-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.enso-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.enso-key i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.enso-loading {
+  height: 5px;
+  overflow: hidden;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: #e3e9e3;
+}
+
+.enso-loading span {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, #3975a8, #aab0aa, #d95b43);
+  animation: water-loading 1.15s ease-in-out infinite;
+}
+
 .sources-panel {
   margin-top: 16px;
 }

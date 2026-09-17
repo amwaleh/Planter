@@ -7,6 +7,7 @@ import type {
   FarmProject,
   FarmProjectInput,
   FarmReport,
+  EnsoTracker,
   LocationMatch,
   LandIntelligence,
   LivestockReport,
@@ -41,6 +42,14 @@ export async function getCrops(): Promise<string[]> {
     throw new Error("The crop catalog could not be loaded.");
   }
   return response.json() as Promise<string[]>;
+}
+
+export async function getEnsoTracker(): Promise<EnsoTracker> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/enso`);
+  if (!response.ok) {
+    throw new Error("Seasonal ENSO context could not be loaded.");
+  }
+  return response.json() as Promise<EnsoTracker>;
 }
 
 export async function searchLocations(query: string): Promise<LocationMatch[]> {

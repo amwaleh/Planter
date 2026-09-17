@@ -48,6 +48,7 @@ Focused application pages:
 - Pick an Eastern Africa coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
 - Draw an outer farm boundary, divide it into named activity/crop sections, and save or reload the farm project.
 - Load current weather, the previous 21 days of conditions, a responsible 21-day outlook, ten-year monthly climate, current-year rainfall comparison, and elevation.
+- Track NOAA CPC El Niño, Neutral, and La Niña probabilities plus the recent ONI trend, with cautious Eastern Africa context and links to ICPAC seasonal outlooks.
 - Search a broad, non-exhaustive East African fruit and vegetable catalog, including common aliases and spelling correction. Only crops with validated prototype rules can be scored.
 - Inspect the crop rules behind recommendations and add sourced custom rules for additional crops.
 - Inspect practical reasons, risks, confidence, timestamps, and sources; the detailed explainability section stays collapsed until needed.

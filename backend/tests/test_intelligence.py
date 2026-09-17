@@ -10,6 +10,7 @@ from app.intelligence import answer_farm_question, build_land_intelligence
 from app.livestock import assess_livestock
 from app.models import ClimateMonth, CurrentWeather, RecentDay, SourceRecord
 from app.providers.land import SoilGridsSoilProvider
+from app.providers.enso import EnsoProvider
 from app.providers.open_meteo import CacheEntry, OpenMeteoData, OpenMeteoProvider
 from app.providers.water import _distance_km
 from app.service import classify_recent_conditions, compare_rainfall, create_farm_report
@@ -195,6 +196,30 @@ def test_soilgrids_interpretation_is_farmer_readable() -> None:
     assert "moderately acidic" in interpretation
     assert "clay-rich" in interpretation
     assert "representative soil samples" in interpretation
+
+
+def test_enso_provider_parses_probabilities_and_oni() -> None:
+    tracker = EnsoProvider._build_tracker(
+        """
+        <h2>Issued September 2026</h2>
+        <tr><th scope="row"><abbr>ASO <span>Aug Sep Oct</span></abbr></th>
+        <td>0</td><td>0</td><td>100</td></tr>
+        <tr><th scope="row"><abbr>SON <span>Sep Oct Nov</span></abbr></th>
+        <td>1</td><td>9</td><td>90</td></tr>
+        """,
+        """
+        SEAS YR TOTAL ANOM
+        MJJ 2026 27.10 0.42
+        JJA 2026 27.40 0.67
+        """,
+        datetime.now(timezone.utc),
+    )
+
+    assert tracker.status == "Available"
+    assert tracker.outlook_phase == "El Niño"
+    assert tracker.observed_phase == "El Niño signal"
+    assert tracker.probabilities[0].el_nino_percent == 100
+    assert tracker.latest_observation.anomaly_c == 0.67
 
 
 def test_assistant_rejects_questions_outside_available_evidence() -> None:

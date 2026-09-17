@@ -71,6 +71,38 @@ class RainfallComparison(BaseModel):
     summary: str
 
 
+class EnsoProbability(BaseModel):
+    season: str
+    la_nina_percent: int
+    neutral_percent: int
+    el_nino_percent: int
+
+
+class EnsoObservation(BaseModel):
+    season: str
+    year: int
+    anomaly_c: float
+
+
+class EnsoTracker(BaseModel):
+    status: Literal["Available", "Unavailable"]
+    outlook_phase: Literal["El Niño", "Neutral", "La Niña", "Unavailable"]
+    observed_phase: Literal["El Niño signal", "Neutral signal", "La Niña signal", "Unavailable"]
+    issued: str | None = None
+    retrieved_at: datetime
+    latest_observation: EnsoObservation | None = None
+    observations: list[EnsoObservation] = Field(default_factory=list)
+    probabilities: list[EnsoProbability] = Field(default_factory=list)
+    eastern_africa_context: str
+    confidence: Confidence
+    source: str
+    source_url: HttpUrl
+    regional_source: str
+    regional_source_url: HttpUrl
+    stale: bool = False
+    limitations: list[str] = Field(default_factory=list)
+
+
 class LocationContext(BaseModel):
     display_name: str
     place: str | None = None

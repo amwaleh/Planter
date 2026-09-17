@@ -58,6 +58,38 @@ export interface RainfallComparison {
   summary: string;
 }
 
+export interface EnsoProbability {
+  season: string;
+  la_nina_percent: number;
+  neutral_percent: number;
+  el_nino_percent: number;
+}
+
+export interface EnsoObservation {
+  season: string;
+  year: number;
+  anomaly_c: number;
+}
+
+export interface EnsoTracker {
+  status: "Available" | "Unavailable";
+  outlook_phase: "El Niño" | "Neutral" | "La Niña" | "Unavailable";
+  observed_phase: "El Niño signal" | "Neutral signal" | "La Niña signal" | "Unavailable";
+  issued: string | null;
+  retrieved_at: string;
+  latest_observation: EnsoObservation | null;
+  observations: EnsoObservation[];
+  probabilities: EnsoProbability[];
+  eastern_africa_context: string;
+  confidence: Confidence;
+  source: string;
+  source_url: string;
+  regional_source: string;
+  regional_source_url: string;
+  stale: boolean;
+  limitations: string[];
+}
+
 export interface LocationContext {
   display_name: string;
   place: string | null;

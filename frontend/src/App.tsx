@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import {
   CalendarDays,
+  CircleGauge,
   ChevronDown,
   ChevronRight,
   CloudRain,
@@ -35,6 +36,7 @@ import {
 } from "recharts";
 import {
   getCrops,
+  getEnsoTracker,
   getFarmReport,
   resolveMapLink,
   searchLocations,
@@ -42,7 +44,12 @@ import {
 import { SiteFooter, SiteHeader } from "./components/SiteChrome";
 import { useLanguage } from "./i18n";
 import { EAST_AFRICA_COORDINATE_HELP, isWithinEastAfrica } from "./region";
-import type { CropAssessment, FarmReport, LocationMatch } from "./types";
+import type {
+  CropAssessment,
+  EnsoTracker,
+  FarmReport,
+  LocationMatch,
+} from "./types";
 
 const fallbackCrops = ["onion", "maize", "beans", "potato", "sorghum", "tomato"];
 const defaultLocation = { latitude: -0.7167, longitude: 36.4333 };
@@ -184,6 +191,96 @@ function AssessmentPanel({ assessment }: { assessment: CropAssessment }) {
   );
 }
 
+function EnsoPanel({
+  tracker,
+  loading,
+}: {
+  tracker: EnsoTracker | null;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <section className="panel enso-panel" aria-busy="true">
+        <p className="eyebrow">Seasonal climate</p>
+        <h2>Loading ENSO tracker...</h2>
+        <div className="enso-loading"><span /></div>
+      </section>
+    );
+  }
+  if (!tracker || tracker.status === "Unavailable") {
+    return (
+      <section className="panel enso-panel">
+        <p className="eyebrow">Seasonal climate</p>
+        <h2>ENSO tracker unavailable</h2>
+        <p>{tracker?.eastern_africa_context ?? "No seasonal ENSO values were substituted."}</p>
+      </section>
+    );
+  }
+  const phaseClass = tracker.outlook_phase.toLowerCase().replace(" ", "-").replace("ñ", "n");
+  return (
+    <section className="panel enso-panel" id="enso">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">Seasonal climate · ENSO</p>
+          <h2>{tracker.outlook_phase} favored</h2>
+        </div>
+        <CircleGauge size={25} />
+      </div>
+      <div className="enso-status-row">
+        <span className={`enso-phase enso-${phaseClass}`}>{tracker.outlook_phase}</span>
+        <span>
+          Latest ONI: <strong>{tracker.latest_observation?.anomaly_c.toFixed(2)}°C</strong>
+          {" · "}{tracker.latest_observation?.season} {tracker.latest_observation?.year}
+        </span>
+      </div>
+      <p className="panel-intro">{tracker.eastern_africa_context}</p>
+      <div className="enso-chart">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={tracker.observations}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="season" tickLine={false} axisLine={false} />
+            <YAxis domain={[-2.5, 2.5]} tickLine={false} axisLine={false} unit="°" />
+            <Tooltip />
+            <Line dataKey="anomaly_c" name="ONI anomaly °C" stroke="#d36d3c" strokeWidth={3} dot />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="enso-probabilities" aria-label="NOAA ENSO phase probabilities">
+        {tracker.probabilities.map((probability) => (
+          <div className="enso-probability-row" key={probability.season}>
+            <strong>{probability.season}</strong>
+            <div className="enso-probability-bar">
+              <span className="enso-la-nina" style={{ width: `${probability.la_nina_percent}%` }} />
+              <span className="enso-neutral" style={{ width: `${probability.neutral_percent}%` }} />
+              <span className="enso-el-nino" style={{ width: `${probability.el_nino_percent}%` }} />
+            </div>
+            <span>{probability.la_nina_percent}% / {probability.neutral_percent}% / {probability.el_nino_percent}%</span>
+          </div>
+        ))}
+        <div className="enso-key">
+          <span><i className="enso-la-nina" />La Niña</span>
+          <span><i className="enso-neutral" />Neutral</span>
+          <span><i className="enso-el-nino" />El Niño</span>
+        </div>
+      </div>
+      <details className="methodology">
+        <summary>Sources and limitations</summary>
+        <p>
+          Issued {tracker.issued}; retrieved {new Date(tracker.retrieved_at).toLocaleString()}.
+          {" "}{tracker.stale ? "Cached data is shown. " : ""}
+          Confidence: {tracker.confidence}.
+        </p>
+        <ul>{tracker.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul>
+        <p>
+          <a href={tracker.source_url} target="_blank" rel="noreferrer">{tracker.source}</a>
+          {" · "}
+          <a href={tracker.regional_source_url} target="_blank" rel="noreferrer">{tracker.regional_source}</a>
+        </p>
+      </details>
+    </section>
+  );
+}
+
 export default function App() {
   const { t } = useLanguage();
   const [latitude, setLatitude] = useState(defaultLocation.latitude);
@@ -199,6 +296,8 @@ export default function App() {
   const [mapLink, setMapLink] = useState("");
   const [resolvingMapLink, setResolvingMapLink] = useState(false);
   const [report, setReport] = useState<FarmReport | null>(null);
+  const [ensoTracker, setEnsoTracker] = useState<EnsoTracker | null>(null);
+  const [ensoLoading, setEnsoLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -226,6 +325,13 @@ export default function App() {
     void getCrops()
       .then(setCropOptions)
       .catch(() => setCropOptions(fallbackCrops));
+  }, []);
+
+  useEffect(() => {
+    void getEnsoTracker()
+      .then(setEnsoTracker)
+      .catch(() => setEnsoTracker(null))
+      .finally(() => setEnsoLoading(false));
   }, []);
 
   const updateLocation = (nextLatitude: number, nextLongitude: number) => {
@@ -544,33 +650,6 @@ export default function App() {
               <details className="methodology"><summary>Classification method</summary><p>{report.recent.method}</p></details>
             </section>
 
-            <div className="content-grid" id="advisor">
-              <AssessmentPanel assessment={report.crop} />
-              <section className="panel outlook-panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">21-day agricultural outlook</p>
-                    <h2>Signals, not certainty</h2>
-                  </div>
-                  <ShieldAlert size={24} />
-                </div>
-                <div className="outlook-list">
-                  {report.outlook.map((signal) => (
-                    <article key={signal.label}>
-                      <span className={`signal signal-${signal.level.toLowerCase()}`}>
-                        {signal.level}
-                      </span>
-                      <div>
-                        <strong>{signal.label}</strong>
-                        <p>{signal.detail}</p>
-                        <small>{signal.confidence} confidence</small>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            </div>
-
             <div className="content-grid">
               <section className="panel chart-panel" id="climate">
                 <div className="panel-heading">
@@ -596,20 +675,54 @@ export default function App() {
                 <p className="chart-summary">{report.rainfall_comparison.summary}</p>
                 <p className="chart-summary">The current month is partial and is excluded from the year-to-date comparison.</p>
               </section>
-              <section className="panel alternative-panel">
-                <p className="eyebrow">Lower-risk alternative</p>
-                <h2>{bestAlternative?.crop ?? "No alternative assessed"}</h2>
-                {bestAlternative && (
-                  <>
-                    <div className="alternative-score">
-                      <strong>{bestAlternative.category}</strong>
-                      <span>relative suitability from the same documented method</span>
-                    </div>
-                    <p>{bestAlternative.reasons[0]}</p>
-                  </>
+              <EnsoPanel tracker={ensoTracker} loading={ensoLoading} />
+            </div>
+
+            <div className="content-grid" id="advisor">
+              <AssessmentPanel assessment={report.crop} />
+              <section className="panel outlook-panel">
+                <div className="panel-heading">
+                  <div>
+                    <p className="eyebrow">21-day agricultural outlook</p>
+                    <h2>Signals, not certainty</h2>
+                  </div>
+                  <ShieldAlert size={24} />
+                </div>
+                {ensoTracker?.status === "Available" && (
+                  <a className="enso-outlook-badge" href="#enso">
+                    Seasonal context: {ensoTracker.outlook_phase} favored
+                  </a>
                 )}
+                <div className="outlook-list">
+                  {report.outlook.map((signal) => (
+                    <article key={signal.label}>
+                      <span className={`signal signal-${signal.level.toLowerCase()}`}>
+                        {signal.level}
+                      </span>
+                      <div>
+                        <strong>{signal.label}</strong>
+                        <p>{signal.detail}</p>
+                        <small>{signal.confidence} confidence</small>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               </section>
             </div>
+
+            <section className="panel alternative-panel">
+              <p className="eyebrow">Lower-risk alternative</p>
+              <h2>{bestAlternative?.crop ?? "No alternative assessed"}</h2>
+              {bestAlternative && (
+                <>
+                  <div className="alternative-score">
+                    <strong>{bestAlternative.category}</strong>
+                    <span>relative suitability from the same documented method</span>
+                  </div>
+                  <p>{bestAlternative.reasons[0]}</p>
+                </>
+              )}
+            </section>
 
             <details className="panel sources-panel" id="sources">
               <summary className="panel-heading">
