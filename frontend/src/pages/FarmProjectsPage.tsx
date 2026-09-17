@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   FeatureGroup,
+  LayerGroup,
   LayersControl,
   MapContainer,
   Marker,
@@ -228,6 +229,21 @@ function ProjectMap({
             url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
           />
         </LayersControl.BaseLayer>
+        <LayersControl.Overlay checked name="Roads, boundaries and place names">
+          <LayerGroup>
+            <TileLayer
+              attribution='Reference layers &copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, OpenStreetMap contributors, and the GIS User Community'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+              opacity={0.9}
+            />
+            <TileLayer
+              attribution='Reference layers &copy; <a href="https://www.esri.com/">Esri</a>'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+          </LayerGroup>
+        </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Farm marker">
           <FeatureGroup>
             <Marker
