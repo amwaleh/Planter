@@ -5,7 +5,7 @@ import { useAuth } from "../auth-context";
 
 export function SiteHeader() {
   const { language, t, changeLanguage } = useLanguage();
-  const { account, configured, initializing, signIn, signOut } = useAuth();
+  const { account, configured, initializing, signOut } = useAuth();
   return (
     <header className="site-header">
       <a className="brand" href={appHref()} aria-label="Planter home">
@@ -27,15 +27,15 @@ export function SiteHeader() {
         {configured && !initializing && (
           account ? (
             <>
-              <span className="account-name">{account.name ?? account.username}</span>
+              <span className="account-name">{account.email}</span>
               <button className="auth-button" type="button" onClick={() => void signOut()}>
                 Sign out
               </button>
             </>
           ) : (
-            <button className="auth-button" type="button" onClick={() => void signIn()}>
+            <a className="auth-button" href={appHref("/farm-projects")}>
               Sign in
-            </button>
+            </a>
           )
         )}
         <button

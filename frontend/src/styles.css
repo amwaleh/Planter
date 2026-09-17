@@ -291,6 +291,7 @@ nav a {
   color: inherit;
   padding: 0.55rem 0.9rem;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .account-name {
@@ -309,6 +310,49 @@ nav a {
   background: var(--paper);
   box-shadow: 0 18px 50px rgba(23, 63, 42, 0.12);
   text-align: center;
+}
+
+.auth-mode-switch {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin: 1.25rem 0;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.auth-mode-switch button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+}
+
+.auth-mode-switch button.active {
+  background: var(--forest);
+  color: white;
+}
+
+.auth-form {
+  width: min(380px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+  text-align: left;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+.auth-form input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem;
+  font: inherit;
 }
 
 .hero {

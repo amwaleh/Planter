@@ -1,14 +1,17 @@
+import asyncio
 from pathlib import Path
 from fastapi.testclient import TestClient
 from httpx import HTTPError
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app import storage
-from app.auth import AuthenticatedUser, get_current_user
+from app.auth import AuthenticatedUser
 from app.main import app
 from app.models import EnsoTracker, MapLinkResolution, SoilIntelligence
+from app.users import Base, get_async_session, get_current_user
 
 client = TestClient(app)
 
@@ -169,6 +172,70 @@ def test_project_api_requires_authentication(tmp_path: Path, monkeypatch) -> Non
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_user_can_register_login_and_access_projects(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(storage, "DATABASE_PATH", tmp_path / "planter.db")
+    storage.initialize_storage()
+    user_engine = create_async_engine(
+        f"sqlite+aiosqlite:///{(tmp_path / 'users.db').as_posix()}"
+    )
+    sessions = async_sessionmaker(user_engine, expire_on_commit=False)
+
+    async def initialize_users() -> None:
+        async with user_engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+    async def session_override():
+        async with sessions() as session:
+            yield session
+
+    asyncio.run(initialize_users())
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides[get_async_session] = session_override
+    try:
+        registered = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "farmer@example.com",
+                "password": "StrongPassword123!",
+            },
+        )
+        assert registered.status_code == 201
+
+        weak_registration = client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "weak@example.com",
+                "password": "short",
+            },
+        )
+        assert weak_registration.status_code == 400
+
+        logged_in = client.post(
+            "/api/v1/auth/jwt/login",
+            data={
+                "username": "farmer@example.com",
+                "password": "StrongPassword123!",
+            },
+        )
+        assert logged_in.status_code == 200
+        token = logged_in.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        profile = client.get("/api/v1/users/me", headers=headers)
+        projects = client.get("/api/v1/projects", headers=headers)
+
+        assert profile.status_code == 200
+        assert profile.json()["email"] == "farmer@example.com"
+        assert projects.status_code == 200
+        assert projects.json() == []
+    finally:
+        app.dependency_overrides.pop(get_async_session, None)
+        asyncio.run(user_engine.dispose())
 
 
 def test_land_endpoint_returns_explicit_state_when_elevation_fails() -> None:

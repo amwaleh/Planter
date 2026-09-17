@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
-from app.auth import get_auth_settings, get_current_user
+from app.auth import get_auth_settings, validate_external_token
 
 
 def test_valid_access_token_returns_stable_subject(monkeypatch) -> None:
@@ -32,7 +32,7 @@ def test_valid_access_token_returns_stable_subject(monkeypatch) -> None:
         ),
     ):
         jwk_client.return_value.get_signing_key_from_jwt.return_value = signing_key
-        user = get_current_user(credentials)
+        user = validate_external_token(credentials)
 
     assert user.subject == "stable-subject"
     assert user.email == "test@example.com"
@@ -52,6 +52,6 @@ def test_invalid_access_token_is_rejected(monkeypatch) -> None:
             jwt.InvalidTokenError("invalid")
         )
         with pytest.raises(HTTPException) as error:
-            get_current_user(credentials)
+            validate_external_token(credentials)
 
     assert error.value.status_code == 401

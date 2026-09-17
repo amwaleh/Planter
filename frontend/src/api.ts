@@ -19,6 +19,7 @@ import type {
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.DEV ? "http://localhost:8000" : "");
+export const apiConfigured = Boolean(API_BASE_URL);
 
 function apiUrl(path: string): string {
   if (!API_BASE_URL) {
@@ -27,6 +28,42 @@ function apiUrl(path: string): string {
     );
   }
   return `${API_BASE_URL}${path}`;
+}
+
+export interface UserAccount {
+  id: string;
+  email: string;
+}
+
+export async function registerUser(
+  email: string,
+  password: string,
+): Promise<UserAccount> {
+  const response = await fetch(apiUrl("/api/v1/auth/register"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    const payload = (await response.json()) as { detail?: string };
+    throw new Error(payload.detail ?? "The account could not be created.");
+  }
+  return response.json() as Promise<UserAccount>;
+}
+
+export async function loginUser(
+  email: string,
+  password: string,
+): Promise<string> {
+  const body = new URLSearchParams({ username: email, password });
+  const response = await fetch(apiUrl("/api/v1/auth/jwt/login"), {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  if (!response.ok) throw new Error("The email or password is incorrect.");
+  const payload = (await response.json()) as { access_token: string };
+  return payload.access_token;
 }
 
 export async function getFarmReport(
@@ -90,6 +127,14 @@ function authenticatedHeaders(accessToken: string, includeJson = false): Headers
     Authorization: `Bearer ${accessToken}`,
     ...(includeJson ? { "Content-Type": "application/json" } : {}),
   };
+}
+
+export async function getCurrentUser(accessToken: string): Promise<UserAccount> {
+  const response = await fetch(apiUrl("/api/v1/users/me"), {
+    headers: authenticatedHeaders(accessToken),
+  });
+  if (!response.ok) throw new Error("Your saved sign-in has expired.");
+  return response.json() as Promise<UserAccount>;
 }
 
 export async function getProjects(accessToken: string): Promise<FarmProject[]> {

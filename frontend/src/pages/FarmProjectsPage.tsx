@@ -316,7 +316,19 @@ function ProjectMap({
 }
 
 export default function FarmProjectsPage() {
-  const { account, configured, initializing, signIn, getAccessToken } = useAuth();
+  const {
+    account,
+    configured,
+    initializing,
+    signIn,
+    signUp,
+    getAccessToken,
+  } = useAuth();
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [latitude, setLatitude] = useState(-0.7167);
   const [longitude, setLongitude] = useState(36.4333);
   const [locationMode, setLocationMode] = useState(false);
@@ -491,6 +503,25 @@ export default function FarmProjectsPage() {
     );
   }, []);
 
+  const submitAuthentication = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setAuthBusy(true);
+    setAuthMessage(null);
+    try {
+      if (authMode === "signup") {
+        await signUp(authEmail.trim(), authPassword);
+      } else {
+        await signIn(authEmail.trim(), authPassword);
+      }
+    } catch (error) {
+      setAuthMessage(
+        error instanceof Error ? error.message : "Authentication failed.",
+      );
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
   if (initializing) {
     return (
       <main>
@@ -508,14 +539,57 @@ export default function FarmProjectsPage() {
         <section className="auth-gate">
           <p className="kicker">Private farm workspace</p>
           <h1>Sign in to save and manage farm projects.</h1>
-          <p>
-            Your farm boundaries, sections, and activities are private to your account.
-            Google and Facebook sign-in are provided through Microsoft Entra External ID.
-          </p>
+          <p>Your farm boundaries, sections, and activities are private to your account.</p>
           {configured ? (
-            <button className="primary-button" type="button" onClick={() => void signIn()}>
-              Sign in with Google or Facebook
-            </button>
+            <>
+              <div className="auth-mode-switch">
+                <button
+                  className={authMode === "login" ? "active" : ""}
+                  type="button"
+                  onClick={() => setAuthMode("login")}
+                >
+                  Log in
+                </button>
+                <button
+                  className={authMode === "signup" ? "active" : ""}
+                  type="button"
+                  onClick={() => setAuthMode("signup")}
+                >
+                  Create account
+                </button>
+              </div>
+              <form className="auth-form" onSubmit={submitAuthentication}>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={authEmail}
+                    onChange={(event) => setAuthEmail(event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    autoComplete={authMode === "signup" ? "new-password" : "current-password"}
+                    minLength={8}
+                    value={authPassword}
+                    onChange={(event) => setAuthPassword(event.target.value)}
+                    required
+                  />
+                </label>
+                <button className="primary-button" type="submit" disabled={authBusy}>
+                  {authBusy
+                    ? "Please wait..."
+                    : authMode === "signup"
+                      ? "Create account"
+                      : "Log in"}
+                </button>
+                {authMessage && <p className="form-message">{authMessage}</p>}
+              </form>
+            </>
           ) : (
             <p className="form-message">
               Federated sign-in is not configured for this deployment yet.

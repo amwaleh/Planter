@@ -1,11 +1,12 @@
-import type { AccountInfo } from "@azure/msal-browser";
 import { createContext, useContext } from "react";
+import type { UserAccount } from "./api";
 
 export interface AuthContextValue {
-  account: AccountInfo | null;
+  account: UserAccount | null;
   configured: boolean;
   initializing: boolean;
-  signIn: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   getAccessToken: () => Promise<string>;
 }

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
 
@@ -60,11 +60,9 @@ def _unauthorized(detail: str) -> HTTPException:
     )
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+def validate_external_token(
+    credentials: HTTPAuthorizationCredentials,
 ) -> AuthenticatedUser:
-    if credentials is None:
-        raise _unauthorized("Sign in is required to access farm projects.")
     try:
         settings = get_auth_settings()
     except RuntimeError as error:

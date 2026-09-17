@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from httpx import HTTPError
 
 from .crop_catalog import list_crop_catalog, resolve_catalog_name
-from .auth import AuthenticatedUser, get_current_user
+from .auth import AuthenticatedUser
 from .crop_data import CROP_RULES, crop_display_name, resolve_crop_name
 from .intelligence import (
     answer_farm_question,
@@ -45,6 +45,15 @@ from .region import (
     EAST_AFRICA_LONGITUDE_MIN,
 )
 from .service import create_farm_report
+from .users import (
+    User,
+    UserCreate,
+    UserRead,
+    auth_backend,
+    create_user_db,
+    fastapi_users,
+    get_current_user,
+)
 from .storage import (
     get_farm_project,
     initialize_storage,
@@ -62,6 +71,7 @@ from .storage import (
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_storage()
+    await create_user_db()
     yield
 
 app = FastAPI(
@@ -87,6 +97,24 @@ water_provider = OpenStreetMapWaterProvider()
 image_provider = WikimediaImageProvider()
 soil_provider = SoilGridsSoilProvider()
 enso_provider = EnsoProvider()
+
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/api/v1/auth/jwt",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/api/v1/auth",
+    tags=["auth"],
+)
+
+
+@app.get("/api/v1/users/me", response_model=UserRead, tags=["auth"])
+async def current_user_profile(
+    user: User = Depends(fastapi_users.current_user(active=True)),
+) -> User:
+    return user
 
 
 @app.get("/health")

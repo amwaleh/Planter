@@ -33,18 +33,16 @@ npm run dev
 
 Open `http://localhost:5173`. The frontend expects the API at `http://localhost:8000` by default. Override it with `VITE_API_BASE_URL`.
 
-## Federated user accounts
+## User accounts
 
-Saved farm projects require a Microsoft Entra External ID access token. Public farm
-intelligence remains available without signing in. Configure the values documented in
-`.env.example`, register the React SPA redirect URIs, expose the
-`FarmProjects.ReadWrite` API scope, and add Google and Facebook as identity providers
-to the External ID user flow. Provider client secrets belong in the tenant/provider
-configuration and must not be committed to this repository.
+Saved farm projects require an account while public farm intelligence remains
+available without signing in. Email/password signup and login use FastAPI Users,
+Argon2 password hashing, and bearer JWTs. Set `PLANTER_AUTH_SECRET` to a long random
+secret in production; local development generates an ignored persistent secret.
 
-Load the `ENTRA_*` values into the FastAPI process environment. Copy the `VITE_*`
-values into `frontend/.env.local` for local development or configure them as build
-variables for GitHub Pages.
+Microsoft Entra External ID support remains available in the backend for a later
+Google/Facebook rollout, but federated buttons are intentionally hidden until those
+providers are configured.
 
 Existing SQLite farm projects created before authentication have no owner and are not
 exposed to signed-in users. SQLite is intended for a single API instance; use durable
