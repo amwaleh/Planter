@@ -103,8 +103,14 @@ function GeomanController({
 
     const handleCreate = (event: L.LeafletEvent & { layer: L.Layer }) => {
       const points = coordinatesFromLayer(event.layer);
-      map.removeLayer(event.layer);
-      if (points.length >= 3) onCreated(request.kind, points);
+      if (points.length >= 3) {
+        onCreated(request.kind, points);
+        requestAnimationFrame(() => {
+          if (map.hasLayer(event.layer)) map.removeLayer(event.layer);
+        });
+      } else {
+        map.removeLayer(event.layer);
+      }
       map.pm.disableDraw();
     };
     const handleDrawEnd = () => onDrawEnded();
@@ -274,14 +280,14 @@ function ProjectMap({
             {boundary.length >= 2 && (
               <Polyline
                 positions={positions(boundary)}
-                pathOptions={{ color: "#173f2a", weight: 3, bubblingMouseEvents: false, pmIgnore: true }}
+                pathOptions={{ color: "#ffd34d", weight: 4, bubblingMouseEvents: false, pmIgnore: true }}
               />
             )}
             {boundary.length >= 3 && (
               <Polygon
                 key={`farm-${geometryKey}`}
                 positions={positions(boundary)}
-                pathOptions={{ color: "#173f2a", fillColor: "#4f7b52", fillOpacity: 0.12, bubblingMouseEvents: false }}
+                pathOptions={{ color: "#ffd34d", weight: 4, fillColor: "#173f2a", fillOpacity: 0.2, bubblingMouseEvents: false }}
                 eventHandlers={{
                   "pm:edit": (event) => onBoundaryChange(coordinatesFromLayer(event.layer)),
                 }}
