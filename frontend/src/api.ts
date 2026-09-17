@@ -20,6 +20,15 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.DEV ? "http://localhost:8000" : "");
 
+function apiUrl(path: string): string {
+  if (!API_BASE_URL) {
+    throw new Error(
+      "The hosted Planter API is not configured yet. Live farm intelligence requires a public FastAPI deployment.",
+    );
+  }
+  return `${API_BASE_URL}${path}`;
+}
+
 export async function getFarmReport(
   latitude: number,
   longitude: number,
@@ -30,7 +39,7 @@ export async function getFarmReport(
     longitude: longitude.toString(),
     crop,
   });
-  const response = await fetch(`${API_BASE_URL}/api/v1/farm-report?${query}`);
+  const response = await fetch(apiUrl(`/api/v1/farm-report?${query}`));
   if (!response.ok) {
     const payload = (await response.json()) as { detail?: string };
     throw new Error(payload.detail ?? "Farm intelligence could not be loaded.");
@@ -39,7 +48,7 @@ export async function getFarmReport(
 }
 
 export async function getCrops(): Promise<string[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/crops`);
+  const response = await fetch(apiUrl("/api/v1/crops"));
   if (!response.ok) {
     throw new Error("The crop catalog could not be loaded.");
   }
@@ -48,7 +57,7 @@ export async function getCrops(): Promise<string[]> {
 
 export async function getEnsoTracker(country?: string | null): Promise<EnsoTracker> {
   const query = country ? `?${new URLSearchParams({ country })}` : "";
-  const response = await fetch(`${API_BASE_URL}/api/v1/enso${query}`);
+  const response = await fetch(apiUrl(`/api/v1/enso${query}`));
   if (!response.ok) {
     throw new Error("Seasonal ENSO context could not be loaded.");
   }
@@ -57,7 +66,7 @@ export async function getEnsoTracker(country?: string | null): Promise<EnsoTrack
 
 export async function searchLocations(query: string): Promise<LocationMatch[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/v1/locations?${new URLSearchParams({ query })}`,
+    apiUrl(`/api/v1/locations?${new URLSearchParams({ query })}`),
   );
   if (!response.ok) {
     throw new Error("Eastern Africa place search is temporarily unavailable.");
@@ -67,7 +76,7 @@ export async function searchLocations(query: string): Promise<LocationMatch[]> {
 
 export async function resolveMapLink(link: string): Promise<MapLinkResolution> {
   const response = await fetch(
-    `${API_BASE_URL}/api/v1/resolve-map-link?${new URLSearchParams({ link })}`,
+    apiUrl(`/api/v1/resolve-map-link?${new URLSearchParams({ link })}`),
   );
   if (!response.ok) {
     const payload = (await response.json()) as { detail?: string };
@@ -77,7 +86,7 @@ export async function resolveMapLink(link: string): Promise<MapLinkResolution> {
 }
 
 export async function getProjects(): Promise<FarmProject[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/projects`);
+  const response = await fetch(apiUrl("/api/v1/projects"));
   if (!response.ok) throw new Error("Saved farms could not be loaded.");
   return response.json() as Promise<FarmProject[]>;
 }
@@ -85,7 +94,7 @@ export async function getProjects(): Promise<FarmProject[]> {
 export async function createProject(
   project: FarmProjectInput,
 ): Promise<FarmProject> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/projects`, {
+  const response = await fetch(apiUrl("/api/v1/projects"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(project),
@@ -101,7 +110,7 @@ export async function updateProject(
   projectId: string,
   project: FarmProjectInput,
 ): Promise<FarmProject> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/projects/${projectId}`, {
+  const response = await fetch(apiUrl(`/api/v1/projects/${projectId}`), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(project),
@@ -114,13 +123,13 @@ export async function updateProject(
 }
 
 export async function getCropRules(): Promise<CropRule[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/crop-rules`);
+  const response = await fetch(apiUrl("/api/v1/crop-rules"));
   if (!response.ok) throw new Error("Crop rules could not be loaded.");
   return response.json() as Promise<CropRule[]>;
 }
 
 export async function getCropCatalog(): Promise<CropCatalogItem[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/crop-catalog`);
+  const response = await fetch(apiUrl("/api/v1/crop-catalog"));
   if (!response.ok) throw new Error("The East African crop catalog could not be loaded.");
   return response.json() as Promise<CropCatalogItem[]>;
 }
@@ -130,7 +139,7 @@ export async function getCropImage(
   title: string,
 ): Promise<CropImageMetadata> {
   const query = new URLSearchParams({ name, title });
-  const response = await fetch(`${API_BASE_URL}/api/v1/crop-image?${query}`);
+  const response = await fetch(apiUrl(`/api/v1/crop-image?${query}`));
   if (!response.ok) {
     const error = new Error("No reusable crop image was found.") as Error & { status: number };
     error.status = response.status;
@@ -140,7 +149,7 @@ export async function getCropImage(
 }
 
 export async function createCropRule(rule: CropRuleInput): Promise<CropRule> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/crop-rules`, {
+  const response = await fetch(apiUrl("/api/v1/crop-rules"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(rule),
@@ -160,7 +169,7 @@ export async function getWaterIntelligence(
     latitude: latitude.toString(),
     longitude: longitude.toString(),
   });
-  const response = await fetch(`${API_BASE_URL}/api/v1/water-intelligence?${query}`);
+  const response = await fetch(apiUrl(`/api/v1/water-intelligence?${query}`));
   if (!response.ok) throw new Error("Water intelligence could not be loaded.");
   return response.json() as Promise<WaterIntelligence>;
 }
@@ -173,7 +182,7 @@ export async function getLandIntelligence(
     latitude: latitude.toString(),
     longitude: longitude.toString(),
   });
-  const response = await fetch(`${API_BASE_URL}/api/v1/land-intelligence?${query}`);
+  const response = await fetch(apiUrl(`/api/v1/land-intelligence?${query}`));
   if (!response.ok) throw new Error("Soil and terrain intelligence could not be loaded.");
   return response.json() as Promise<LandIntelligence>;
 }
@@ -186,7 +195,7 @@ export async function getLivestockReport(
     latitude: latitude.toString(),
     longitude: longitude.toString(),
   });
-  const response = await fetch(`${API_BASE_URL}/api/v1/livestock?${query}`);
+  const response = await fetch(apiUrl(`/api/v1/livestock?${query}`));
   if (!response.ok) throw new Error("Livestock guidance could not be loaded.");
   return response.json() as Promise<LivestockReport>;
 }
@@ -197,7 +206,7 @@ export async function askFarmAssistant(
   crop: string,
   question: string,
 ): Promise<AssistantResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/assistant`, {
+  const response = await fetch(apiUrl("/api/v1/assistant"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ latitude, longitude, crop, question }),
@@ -207,7 +216,7 @@ export async function askFarmAssistant(
 }
 
 export async function getProviderHealth(): Promise<ProviderHealth[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/provider-health`);
+  const response = await fetch(apiUrl("/api/v1/provider-health"));
   if (!response.ok) throw new Error("Provider health could not be loaded.");
   return response.json() as Promise<ProviderHealth[]>;
 }
