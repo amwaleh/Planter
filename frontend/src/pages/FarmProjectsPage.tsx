@@ -5,6 +5,7 @@ import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import {
   Check,
   Focus,
+  Info,
   LoaderCircle,
   MapPin,
   Pencil,
@@ -1506,8 +1507,12 @@ export default function FarmProjectsPage() {
                 <Focus size={16} /> View all
               </button>
             </div>
-            <div className="map-help">
-              <Pencil size={15} />
+            <div
+              className="map-help"
+              tabIndex={0}
+              aria-label="Map drawing instructions"
+            >
+              <Info size={16} />
               <span>Finish a shape by tapping its first point or pressing Enter. Use the edit control at top left to move vertices.</span>
             </div>
           </div>
