@@ -1261,6 +1261,21 @@ nav a {
   text-align: left;
 }
 
+.boundary-focus-link > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.boundary-focus-link strong {
+  color: inherit;
+}
+
+.boundary-focus-link small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
 .boundary-summary .boundary-focus-link:hover {
   color: var(--leaf);
   text-decoration: underline;

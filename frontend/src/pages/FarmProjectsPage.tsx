@@ -129,6 +129,20 @@ function boundaryCenter(boundary: Coordinate[]): Coordinate {
   );
 }
 
+function parcelPlan(boundary: Coordinate[], sections: FarmSection[]) {
+  const parcelSections = sections.filter((section) =>
+    sectionIsInsideFarm(section.boundary, [boundary]),
+  );
+  return {
+    activities: Array.from(
+      new Set(parcelSections.map((section) => section.activity.trim()).filter(Boolean)),
+    ),
+    crops: Array.from(
+      new Set(parcelSections.map((section) => section.crop?.trim()).filter(Boolean)),
+    ),
+  };
+}
+
 function GeomanController({
   request,
   cancelRequest,
@@ -381,16 +395,7 @@ function ProjectMap({
             )}
             {boundaries.map((boundary, index) => {
               const center = boundaryCenter(boundary);
-              const parcelSections = sections.filter((section) =>
-                sectionIsInsideFarm(section.boundary, [boundary]),
-              );
-              const parcelUses = Array.from(
-                new Set(
-                  parcelSections
-                    .map((section) => section.crop?.trim() || section.activity.trim())
-                    .filter(Boolean),
-                ),
-              ).slice(0, 3);
+              const plan = parcelPlan(boundary, sections);
               return (
                 <Marker
                   key={`parcel-marker-${geometryKey}-${index}`}
@@ -410,21 +415,15 @@ function ProjectMap({
                           <strong>{projectName.trim() || "Unnamed farm"} · Parcel {index + 1}</strong>
                         </div>
                       </div>
-                      <div className="project-popup-metrics">
-                        <div><strong>{boundary.length}</strong><span>Boundary points</span></div>
-                        <div><strong>{parcelSections.length}</strong><span>Sections</span></div>
-                      </div>
                       <dl>
                         <div>
-                          <dt>Parcel centre</dt>
-                          <dd>{center.latitude.toFixed(6)}, {center.longitude.toFixed(6)}</dd>
+                          <dt>Planned activity</dt>
+                          <dd>{plan.activities.slice(0, 3).join(", ") || "----"}</dd>
                         </div>
-                        {parcelUses.length > 0 && (
-                          <div>
-                            <dt>Planned crops / uses</dt>
-                            <dd>{parcelUses.join(", ")}</dd>
-                          </div>
-                        )}
+                        <div>
+                          <dt>Crop or use</dt>
+                          <dd>{plan.crops.slice(0, 3).join(", ") || "----"}</dd>
+                        </div>
                       </dl>
                       <p>This marker follows the parcel boundary when it is edited.</p>
                     </div>
@@ -944,33 +943,41 @@ export default function FarmProjectsPage() {
               <div className="boundary-summary">
                 <span>{boundaries.length > 0 ? `${boundaries.length} farm parcel${boundaries.length === 1 ? "" : "s"} captured` : "No farm parcels yet"}</span>
               </div>
-              {boundaries.map((boundary, index) => (
-                <div className="boundary-summary" key={`boundary-${index}`}>
-                  <button
-                    className="boundary-focus-link"
-                    type="button"
-                    onClick={() => setParcelFocusRequest({ id: Date.now(), index })}
-                  >
-                    <MapPin size={14} />
-                    Parcel {index + 1} · {boundary.length} boundary points
-                  </button>
-                  <div className="boundary-actions">
+              {boundaries.map((boundary, index) => {
+                const plan = parcelPlan(boundary, sections);
+                return (
+                  <div className="boundary-summary" key={`boundary-${index}`}>
                     <button
+                      className="boundary-focus-link"
                       type="button"
-                      onClick={() => {
-                        const remaining = boundaries.filter((_, boundaryIndex) => boundaryIndex !== index);
-                        if (sections.some((section) => !sectionIsInsideFarm(section.boundary, remaining))) {
-                          setMessage("Remove or move sections in this parcel before removing it.");
-                          return;
-                        }
-                        setBoundaries(remaining);
-                      }}
+                      onClick={() => setParcelFocusRequest({ id: Date.now(), index })}
                     >
-                      Remove parcel
+                      <MapPin size={14} />
+                      <span>
+                        <strong>Parcel {index + 1}</strong>
+                        <small>
+                          {plan.activities[0] || "----"} · {plan.crops[0] || "----"}
+                        </small>
+                      </span>
                     </button>
+                    <div className="boundary-actions">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const remaining = boundaries.filter((_, boundaryIndex) => boundaryIndex !== index);
+                          if (sections.some((section) => !sectionIsInsideFarm(section.boundary, remaining))) {
+                            setMessage("Remove or move sections in this parcel before removing it.");
+                            return;
+                          }
+                          setBoundaries(remaining);
+                        }}
+                      >
+                        Remove parcel
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="section-editor">
                 <h3>Add a farm section</h3>
                 {sectionDraft.length < 3 ? (
