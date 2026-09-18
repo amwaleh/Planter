@@ -608,7 +608,7 @@ export default function FarmProjectsPage() {
     setDrawRequest(null);
     setLocationMode(false);
     setResetEditRequest((request) => request + 1);
-    setFitRequest((request) => request + 1);
+    setCenterFocusRequest((request) => request + 1);
     setMessage(`Loaded ${project.name}. Map shapes and activities are ready to edit.`);
   };
 
