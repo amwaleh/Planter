@@ -439,7 +439,8 @@ function ProjectMap({
               <Polygon
                 key={`farm-${geometryKey}-${index}`}
                 positions={positions(boundary)}
-                pathOptions={{ color: "#ffd34d", weight: 4, fillColor: "#173f2a", fillOpacity: 0.2, bubblingMouseEvents: false }}
+                interactive={!drawRequest}
+                pathOptions={{ color: "#ffd34d", weight: 4, fillColor: "#173f2a", fillOpacity: 0.2 }}
                 eventHandlers={{
                   "pm:edit": (event) => onBoundaryChange(index, coordinatesFromLayer(event.layer)),
                 }}
@@ -457,10 +458,10 @@ function ProjectMap({
               <Polygon
                 key={`${geometryKey}-${section.name}-${index}`}
                 positions={positions(section.boundary)}
+                interactive={!drawRequest}
                 pathOptions={{
                   color: index % 2 === 0 ? "#e8b449" : "#72523f",
                   fillOpacity: 0.28,
-                  bubblingMouseEvents: false,
                 }}
                 eventHandlers={{
                   "pm:edit": (event) => onSectionChange(index, coordinatesFromLayer(event.layer)),
