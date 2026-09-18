@@ -25,7 +25,7 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
             name="Demo farm",
             center_latitude=-1.03,
             center_longitude=36.04,
-            boundary=boundary,
+            boundaries=[boundary],
             sections=[
                 FarmSection(
                     name="North plot",
@@ -42,6 +42,11 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
     assert loaded.name == "Demo farm"
     assert loaded.sections[0].activity == "Planting maize"
 
+    second_boundary = [
+        Coordinate(latitude=-1.2, longitude=36.2),
+        Coordinate(latitude=-1.2, longitude=36.3),
+        Coordinate(latitude=-1.3, longitude=36.3),
+    ]
     updated = storage.update_farm_project(
         "user-a",
         project.id,
@@ -49,7 +54,10 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
             name="Demo farm updated",
             center_latitude=-1.04,
             center_longitude=36.05,
-            boundary=[*boundary, Coordinate(latitude=-1.1, longitude=36.0)],
+            boundaries=[
+                [*boundary, Coordinate(latitude=-1.1, longitude=36.0)],
+                second_boundary,
+            ],
             sections=[
                 FarmSection(
                     name="South plot",
@@ -64,7 +72,8 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
     reloaded = storage.get_farm_project("user-a", project.id)
     assert reloaded is not None
     assert reloaded.name == "Demo farm updated"
-    assert len(reloaded.boundary) == 4
+    assert len(reloaded.boundaries) == 2
+    assert len(reloaded.boundaries[0]) == 4
     assert reloaded.sections[0].name == "South plot"
     assert reloaded.sections[0].activity == "Grazing rotation"
     assert storage.list_farm_projects("user-b") == []
@@ -76,7 +85,7 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
             name="Other user's edit",
             center_latitude=-1.04,
             center_longitude=36.05,
-            boundary=boundary,
+            boundaries=[boundary],
             sections=[],
         ),
     ) is None
@@ -114,6 +123,25 @@ def test_storage_migration_does_not_expose_unowned_projects(
     storage.initialize_storage()
 
     assert storage.list_farm_projects("user-a") == []
+
+
+def test_legacy_single_boundary_payload_is_migrated() -> None:
+    payload = FarmProjectCreate.model_validate(
+        {
+            "name": "Legacy API farm",
+            "center_latitude": -1.03,
+            "center_longitude": 36.04,
+            "boundary": [
+                {"latitude": -1.0, "longitude": 36.0},
+                {"latitude": -1.0, "longitude": 36.1},
+                {"latitude": -1.1, "longitude": 36.1},
+            ],
+            "sections": [],
+        }
+    )
+
+    assert len(payload.boundaries) == 1
+    assert len(payload.boundaries[0]) == 3
 
 
 def test_custom_crop_rule_round_trip(tmp_path: Path, monkeypatch) -> None:

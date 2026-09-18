@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "@geoman-io/leaflet-geoman-free";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import {
   Check,
   Focus,
+  LoaderCircle,
   MapPin,
   Pencil,
   Plus,
   Save,
+  Search,
   SquareDashed,
   Trash2,
   X,
@@ -20,16 +22,26 @@ import {
   MapContainer,
   Marker,
   Polygon,
-  Polyline,
   Popup,
   TileLayer,
   Tooltip,
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { createProject, getCrops, getProjects, updateProject } from "../api";
+import {
+  createProject,
+  getCrops,
+  getProjects,
+  searchLocations,
+  updateProject,
+} from "../api";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
-import type { Coordinate, FarmProject, FarmSection } from "../types";
+import type {
+  Coordinate,
+  FarmProject,
+  FarmSection,
+  LocationMatch,
+} from "../types";
 import { useAuth } from "../auth-context";
 
 type DrawKind = "farm" | "section";
@@ -53,6 +65,52 @@ function coordinatesFromLayer(layer: L.Layer): Coordinate[] {
     latitude: point.lat,
     longitude: point.lng,
   }));
+}
+
+function pointIsInsideBoundary(
+  point: Coordinate,
+  boundary: Coordinate[],
+): boolean {
+  const onBoundary = boundary.some((currentPoint, index) => {
+    const nextPoint = boundary[(index + 1) % boundary.length];
+    const crossProduct =
+      (point.latitude - currentPoint.latitude) *
+        (nextPoint.longitude - currentPoint.longitude) -
+      (point.longitude - currentPoint.longitude) *
+        (nextPoint.latitude - currentPoint.latitude);
+    if (Math.abs(crossProduct) > 1e-9) return false;
+    return (
+      point.latitude >= Math.min(currentPoint.latitude, nextPoint.latitude) - 1e-9 &&
+      point.latitude <= Math.max(currentPoint.latitude, nextPoint.latitude) + 1e-9 &&
+      point.longitude >= Math.min(currentPoint.longitude, nextPoint.longitude) - 1e-9 &&
+      point.longitude <= Math.max(currentPoint.longitude, nextPoint.longitude) + 1e-9
+    );
+  });
+  if (onBoundary) return true;
+
+  let inside = false;
+  for (let index = 0, previous = boundary.length - 1; index < boundary.length; previous = index++) {
+    const currentPoint = boundary[index];
+    const previousPoint = boundary[previous];
+    const intersects =
+      currentPoint.latitude > point.latitude !== previousPoint.latitude > point.latitude &&
+      point.longitude <
+        ((previousPoint.longitude - currentPoint.longitude) *
+          (point.latitude - currentPoint.latitude)) /
+          (previousPoint.latitude - currentPoint.latitude) +
+          currentPoint.longitude;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function sectionIsInsideFarm(
+  sectionBoundary: Coordinate[],
+  farmBoundaries: Coordinate[][],
+): boolean {
+  return farmBoundaries.some((farmBoundary) =>
+    sectionBoundary.every((point) => pointIsInsideBoundary(point, farmBoundary)),
+  );
 }
 
 function GeomanController({
@@ -140,7 +198,7 @@ function GeomanController({
 function ProjectMap({
   latitude,
   longitude,
-  boundary,
+  boundaries,
   sectionDraft,
   sections,
   projectName,
@@ -158,7 +216,7 @@ function ProjectMap({
 }: {
   latitude: number;
   longitude: number;
-  boundary: Coordinate[];
+  boundaries: Coordinate[][];
   sectionDraft: Coordinate[];
   sections: FarmSection[];
   projectName: string;
@@ -171,7 +229,7 @@ function ProjectMap({
   onCenterChange: (latitude: number, longitude: number) => void;
   onShapeCreated: (kind: DrawKind, points: Coordinate[]) => void;
   onDrawEnded: () => void;
-  onBoundaryChange: (points: Coordinate[]) => void;
+  onBoundaryChange: (index: number, points: Coordinate[]) => void;
   onSectionChange: (index: number, points: Coordinate[]) => void;
 }) {
   const map = useMap();
@@ -186,7 +244,7 @@ function ProjectMap({
     if (fitRequest === 0) return;
     const points = [
       [latitude, longitude] as [number, number],
-      ...positions(boundary),
+      ...boundaries.flatMap(positions),
       ...positions(sectionDraft),
       ...sections.flatMap((section) => positions(section.boundary)),
     ];
@@ -195,7 +253,7 @@ function ProjectMap({
     } else {
       map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 18 });
     }
-  }, [boundary, fitRequest, latitude, longitude, map, sectionDraft, sections]);
+  }, [boundaries, fitRequest, latitude, longitude, map, sectionDraft, sections]);
 
   useMapEvents({
     click(event) {
@@ -277,24 +335,20 @@ function ProjectMap({
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Farm boundary">
           <FeatureGroup>
-            {boundary.length >= 2 && (
-              <Polyline
-                positions={positions(boundary)}
-                pathOptions={{ color: "#ffd34d", weight: 4, bubblingMouseEvents: false, pmIgnore: true }}
-              />
-            )}
-            {boundary.length >= 3 && (
+            {boundaries.map((boundary, index) => (
               <Polygon
-                key={`farm-${geometryKey}`}
+                key={`farm-${geometryKey}-${index}`}
                 positions={positions(boundary)}
                 pathOptions={{ color: "#ffd34d", weight: 4, fillColor: "#173f2a", fillOpacity: 0.2, bubblingMouseEvents: false }}
                 eventHandlers={{
-                  "pm:edit": (event) => onBoundaryChange(coordinatesFromLayer(event.layer)),
+                  "pm:edit": (event) => onBoundaryChange(index, coordinatesFromLayer(event.layer)),
                 }}
               >
-                <Tooltip sticky>{projectName.trim() || "Farm boundary"}</Tooltip>
+                <Tooltip sticky>
+                  {projectName.trim() || "Farm"} · parcel {index + 1}
+                </Tooltip>
               </Polygon>
-            )}
+            ))}
           </FeatureGroup>
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Farm sections">
@@ -365,7 +419,7 @@ export default function FarmProjectsPage() {
   const [drawRequest, setDrawRequest] = useState<DrawRequest | null>(null);
   const [cancelRequest, setCancelRequest] = useState(0);
   const [resetEditRequest, setResetEditRequest] = useState(0);
-  const [boundary, setBoundary] = useState<Coordinate[]>([]);
+  const [boundaries, setBoundaries] = useState<Coordinate[][]>([]);
   const [sectionDraft, setSectionDraft] = useState<Coordinate[]>([]);
   const [sections, setSections] = useState<FarmSection[]>([]);
   const [projectName, setProjectName] = useState("");
@@ -378,6 +432,10 @@ export default function FarmProjectsPage() {
   const [fitRequest, setFitRequest] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [placeMatches, setPlaceMatches] = useState<LocationMatch[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchRequest = useRef(0);
 
   useEffect(() => {
     void getCrops().then(setCropOptions).catch(() => setCropOptions([]));
@@ -403,15 +461,39 @@ export default function FarmProjectsPage() {
     setMessage("Farm centre updated.");
   }, []);
 
+  const searchForPlace = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (placeQuery.trim().length < 2) {
+      setMessage("Enter at least two characters to search for a place.");
+      return;
+    }
+    setSearching(true);
+    setMessage(null);
+    const requestId = ++searchRequest.current;
+    try {
+      const matches = await searchLocations(placeQuery.trim());
+      if (requestId === searchRequest.current) setPlaceMatches(matches);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Location search is temporarily unavailable.",
+      );
+    } finally {
+      if (requestId === searchRequest.current) setSearching(false);
+    }
+  };
+
+  const choosePlace = (match: LocationMatch) => {
+    setCenter(match.latitude, match.longitude);
+    setPlaceQuery([match.name, match.admin2, match.admin1].filter(Boolean).join(", "));
+    setPlaceMatches([]);
+  };
+
   const finishDrawing = useCallback((kind: DrawKind, points: Coordinate[]) => {
     if (kind === "farm") {
-      if (sections.length > 0) {
-        setSections([]);
-        setMessage("New farm boundary captured. Existing sections were cleared; redraw them inside this boundary.");
-      } else {
-        setMessage("Farm boundary captured. You can edit it with the map edit control.");
-      }
-      setBoundary(points);
+      setBoundaries((current) => [...current, points]);
+      setMessage("Farm parcel captured. Draw another parcel or add sections.");
       const center = points.reduce(
         (total, point) => ({
           latitude: total.latitude + point.latitude / points.length,
@@ -428,13 +510,13 @@ export default function FarmProjectsPage() {
     setDrawRequest(null);
     setLocationMode(false);
     setFitRequest((request) => request + 1);
-  }, [sections.length]);
+  }, []);
 
   const endDrawing = useCallback(() => setDrawRequest(null), []);
 
   const startDrawing = (kind: DrawKind) => {
-    if (kind === "section" && boundary.length < 3) {
-      setMessage("Draw the farm boundary before adding sections.");
+    if (kind === "section" && boundaries.length === 0) {
+      setMessage("Draw at least one farm parcel before adding sections.");
       return;
     }
     setLocationMode(false);
@@ -447,6 +529,10 @@ export default function FarmProjectsPage() {
   const addSection = () => {
     if (sectionDraft.length < 3 || !sectionName.trim() || !sectionActivity.trim()) {
       setMessage("Draw a section and enter its name and planned activity.");
+      return;
+    }
+    if (!sectionIsInsideFarm(sectionDraft, boundaries)) {
+      setMessage("The section must be fully inside one farm parcel.");
       return;
     }
     setSections((current) => [
@@ -467,15 +553,19 @@ export default function FarmProjectsPage() {
 
   const save = async () => {
     if (saving) return;
-    if (!projectName.trim() || boundary.length < 3) {
-      setMessage("Enter a project name and draw the farm boundary before saving.");
+    if (!projectName.trim() || boundaries.length === 0) {
+      setMessage("Enter a project name and draw at least one farm parcel before saving.");
+      return;
+    }
+    if (sections.some((section) => !sectionIsInsideFarm(section.boundary, boundaries))) {
+      setMessage("Every section must remain fully inside one farm parcel before saving.");
       return;
     }
     const payload = {
       name: projectName.trim(),
       center_latitude: latitude,
       center_longitude: longitude,
-      boundary,
+      boundaries,
       sections,
     };
     try {
@@ -503,7 +593,7 @@ export default function FarmProjectsPage() {
     setProjectName(project.name);
     setLatitude(project.center_latitude);
     setLongitude(project.center_longitude);
-    setBoundary(project.boundary);
+    setBoundaries(project.boundaries);
     setSections(project.sections);
     setSectionDraft([]);
     setDrawRequest(null);
@@ -517,13 +607,21 @@ export default function FarmProjectsPage() {
     if (saving) return;
     setActiveProjectId(null);
     setProjectName("");
-    setBoundary([]);
+    setBoundaries([]);
     setSections([]);
     setSectionDraft([]);
     setDrawRequest(null);
     setResetEditRequest((request) => request + 1);
     setMessage("Started a new farm project.");
   };
+
+  const updateFarmBoundary = useCallback((index: number, points: Coordinate[]) => {
+    setBoundaries((current) =>
+      current.map((boundary, boundaryIndex) =>
+        boundaryIndex === index ? points : boundary,
+      ),
+    );
+  }, []);
 
   const updateSectionBoundary = useCallback((index: number, points: Coordinate[]) => {
     setSections((current) =>
@@ -642,8 +740,8 @@ export default function FarmProjectsPage() {
       </section>
       <section className="page-workspace">
         <div className="project-steps" aria-label="Farm project steps">
-          <span className={boundary.length >= 3 ? "complete" : "active"}><strong>1</strong> Draw farm</span>
-          <span className={sections.length > 0 ? "complete" : boundary.length >= 3 ? "active" : ""}><strong>2</strong> Add sections</span>
+          <span className={boundaries.length > 0 ? "complete" : "active"}><strong>1</strong> Draw farm</span>
+          <span className={sections.length > 0 ? "complete" : boundaries.length > 0 ? "active" : ""}><strong>2</strong> Add sections</span>
           <span className={activeProjectId ? "complete" : sections.length > 0 ? "active" : ""}><strong>3</strong> Save project</span>
         </div>
         <div className="project-page-grid">
@@ -652,7 +750,7 @@ export default function FarmProjectsPage() {
               <ProjectMap
                 latitude={latitude}
                 longitude={longitude}
-                boundary={boundary}
+                boundaries={boundaries}
                 sectionDraft={sectionDraft}
                 sections={sections}
                 projectName={projectName}
@@ -665,10 +763,38 @@ export default function FarmProjectsPage() {
                 onCenterChange={setCenter}
                 onShapeCreated={finishDrawing}
                 onDrawEnded={endDrawing}
-                onBoundaryChange={setBoundary}
+                onBoundaryChange={updateFarmBoundary}
                 onSectionChange={updateSectionBoundary}
               />
             </MapContainer>
+            <form className="map-search project-map-search" onSubmit={searchForPlace}>
+              <Search size={18} />
+              <input
+                aria-label="Search for an Eastern Africa place"
+                placeholder="Search town, village, or place"
+                value={placeQuery}
+                onChange={(event) => setPlaceQuery(event.target.value)}
+              />
+              <button type="submit" aria-label="Search places" disabled={searching}>
+                {searching ? <LoaderCircle className="spin" size={18} /> : "Find"}
+              </button>
+              {placeMatches.length > 0 && (
+                <div className="search-results">
+                  {placeMatches.map((match) => (
+                    <button
+                      key={`${match.name}-${match.latitude}-${match.longitude}`}
+                      type="button"
+                      onClick={() => choosePlace(match)}
+                    >
+                      <strong>{match.name}</strong>
+                      <span>
+                        {[match.admin2, match.admin1].filter(Boolean).join(", ")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </form>
             <div className="farm-map-tools">
               <button
                 className={locationMode ? "active" : ""}
@@ -684,7 +810,7 @@ export default function FarmProjectsPage() {
               <button className={drawRequest?.kind === "farm" ? "active" : ""} type="button" onClick={() => startDrawing("farm")}>
                 <SquareDashed size={16} /> Draw farm
               </button>
-              <button className={drawRequest?.kind === "section" ? "active" : ""} type="button" onClick={() => startDrawing("section")} disabled={boundary.length < 3}>
+              <button className={drawRequest?.kind === "section" ? "active" : ""} type="button" onClick={() => startDrawing("section")} disabled={boundaries.length === 0}>
                 <Plus size={16} /> Draw section
               </button>
               {drawRequest && (
@@ -709,13 +835,30 @@ export default function FarmProjectsPage() {
             <div className="project-form">
               <label>Project name<input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="e.g. Mwangaza Farm" /></label>
               <div className="boundary-summary">
-                <span>{boundary.length >= 3 ? `${boundary.length} boundary points captured` : "No farm boundary yet"}</span>
-                {boundary.length >= 3 && <button type="button" onClick={() => { setBoundary([]); setSections([]); setSectionDraft([]); }}>Remove farm shape</button>}
+                <span>{boundaries.length > 0 ? `${boundaries.length} farm parcel${boundaries.length === 1 ? "" : "s"} captured` : "No farm parcels yet"}</span>
               </div>
+              {boundaries.map((boundary, index) => (
+                <div className="boundary-summary" key={`boundary-${index}`}>
+                  <span>Parcel {index + 1} · {boundary.length} boundary points</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const remaining = boundaries.filter((_, boundaryIndex) => boundaryIndex !== index);
+                      if (sections.some((section) => !sectionIsInsideFarm(section.boundary, remaining))) {
+                        setMessage("Remove or move sections in this parcel before removing it.");
+                        return;
+                      }
+                      setBoundaries(remaining);
+                    }}
+                  >
+                    Remove parcel
+                  </button>
+                </div>
+              ))}
               <div className="section-editor">
                 <h3>Add a farm section</h3>
                 {sectionDraft.length < 3 ? (
-                  <button className="secondary-button" type="button" onClick={() => startDrawing("section")} disabled={boundary.length < 3}>
+                  <button className="secondary-button" type="button" onClick={() => startDrawing("section")} disabled={boundaries.length === 0}>
                     <SquareDashed size={16} /> Draw section shape
                   </button>
                 ) : (
@@ -747,7 +890,7 @@ export default function FarmProjectsPage() {
             {projects.map((project) => (
               <button className={project.id === activeProjectId ? "active" : ""} type="button" key={project.id} onClick={() => load(project)} disabled={saving}>
                 <strong>{project.name}</strong>
-                <span>{project.boundary.length} boundary points · {project.sections.length} sections</span>
+                <span>{project.boundaries.length} parcels · {project.sections.length} sections</span>
                 <small>Updated {new Date(project.updated_at).toLocaleString()}</small>
               </button>
             ))}

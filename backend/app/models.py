@@ -1,7 +1,14 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import (
+    BaseModel,
+    Field,
+    HttpUrl,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from .region import (
     EAST_AFRICA_LATITUDE_MAX,
@@ -11,6 +18,46 @@ from .region import (
 )
 
 Confidence = Literal["High", "Medium", "Low"]
+
+
+def _point_is_inside_boundary(point: "Coordinate", boundary: list["Coordinate"]) -> bool:
+    for index, current in enumerate(boundary):
+        next_point = boundary[(index + 1) % len(boundary)]
+        cross_product = (
+            (point.latitude - current.latitude)
+            * (next_point.longitude - current.longitude)
+            - (point.longitude - current.longitude)
+            * (next_point.latitude - current.latitude)
+        )
+        if abs(cross_product) <= 1e-9 and (
+            min(current.latitude, next_point.latitude) - 1e-9
+            <= point.latitude
+            <= max(current.latitude, next_point.latitude) + 1e-9
+            and min(current.longitude, next_point.longitude) - 1e-9
+            <= point.longitude
+            <= max(current.longitude, next_point.longitude) + 1e-9
+        ):
+            return True
+
+    inside = False
+    previous = len(boundary) - 1
+    for index, current in enumerate(boundary):
+        previous_point = boundary[previous]
+        intersects = (
+            (current.latitude > point.latitude)
+            != (previous_point.latitude > point.latitude)
+            and point.longitude
+            < (
+                (previous_point.longitude - current.longitude)
+                * (point.latitude - current.latitude)
+                / (previous_point.latitude - current.latitude)
+                + current.longitude
+            )
+        )
+        if intersects:
+            inside = not inside
+        previous = index
+    return inside
 
 
 class SourceRecord(BaseModel):
@@ -293,14 +340,51 @@ class FarmProjectCreate(BaseModel):
         ge=EAST_AFRICA_LONGITUDE_MIN,
         le=EAST_AFRICA_LONGITUDE_MAX,
     )
-    boundary: list[Coordinate] = Field(min_length=3)
+    boundaries: list[list[Coordinate]] = Field(min_length=1)
     sections: list[FarmSection] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_single_boundary(cls, data: object) -> object:
+        if isinstance(data, dict) and "boundaries" not in data and "boundary" in data:
+            return {**data, "boundaries": [data["boundary"]]}
+        return data
+
+    @field_validator("boundaries")
+    @classmethod
+    def validate_boundaries(
+        cls,
+        boundaries: list[list[Coordinate]],
+    ) -> list[list[Coordinate]]:
+        if any(len(boundary) < 3 for boundary in boundaries):
+            raise ValueError("Each farm boundary must contain at least three points.")
+        return boundaries
+
+    @model_validator(mode="after")
+    def validate_section_locations(self) -> "FarmProjectCreate":
+        for section in self.sections:
+            if not any(
+                all(
+                    _point_is_inside_boundary(point, farm_boundary)
+                    for point in section.boundary
+                )
+                for farm_boundary in self.boundaries
+            ):
+                raise ValueError(
+                    f"Section '{section.name}' must be fully inside one farm boundary."
+                )
+        return self
 
 
 class FarmProject(FarmProjectCreate):
     id: str
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def boundary(self) -> list[Coordinate]:
+        return self.boundaries[0]
 
 
 class CropRuleCreate(BaseModel):

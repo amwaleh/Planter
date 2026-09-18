@@ -62,7 +62,7 @@ but backend-dependent features remain unavailable.
 Focused application pages:
 
 - `/` — farm location and intelligence dashboard
-- `/farm-projects` — guided mouse/touch polygon drawing, vertex editing, named activity sections, in-place project updates, switchable map layers, tooltips, marker details, and fit-to-bounds controls
+- `/farm-projects` — guided mouse/touch drawing for multiple separate farm parcels, vertex editing, place search, named activity sections, in-place project updates, switchable map layers, tooltips, marker details, and fit-to-bounds controls
 - `/crop-knowledge` — broad East African fruit and vegetable catalog, attributed plant images, validated crop rules, and sourced custom-rule creation
 - `/water` — rainfall, irrigation signals, mapped surface water, and explicit groundwater/piped-water limitations
 - `/land` — click-to-analyze terrain map with selectable SoilGrids pH, texture, carbon, nitrogen, CEC, and bulk-density overlays plus field-verification guidance
@@ -72,7 +72,7 @@ Focused application pages:
 ## Current prototype scope
 
 - Pick an Eastern Africa coordinate using a map, GPS, coordinate entry, place search, or a pasted Google Maps share link.
-- Draw an outer farm boundary, divide it into named activity/crop sections, and save or reload the farm project.
+- Draw one or more separate farm parcel boundaries, divide the farm into named activity/crop sections, and save or reload the farm project.
 - Load current weather, the previous 21 days of conditions, a responsible 21-day outlook, ten-year monthly climate, current-year rainfall comparison, and elevation.
 - Track NOAA CPC El Niño, Neutral, and La Niña probabilities plus the recent ONI trend, with cautious Eastern Africa context and links to ICPAC seasonal outlooks.
 - Search a broad, non-exhaustive East African fruit and vegetable catalog, including common aliases and spelling correction. Only crops with validated prototype rules can be scored.

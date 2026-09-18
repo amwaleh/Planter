@@ -603,6 +603,12 @@ nav a {
   font-size: 14px;
 }
 
+.project-map-search {
+  left: 58px;
+  right: 58px;
+  max-width: 520px;
+}
+
 .map-search input {
   min-width: 0;
   flex: 1;

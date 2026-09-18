@@ -128,7 +128,12 @@ def save_farm_project(owner_id: str, payload: FarmProjectCreate) -> FarmProject:
                 project.name,
                 project.center_latitude,
                 project.center_longitude,
-                json.dumps([point.model_dump() for point in project.boundary]),
+                json.dumps(
+                    [
+                        [point.model_dump() for point in boundary]
+                        for boundary in project.boundaries
+                    ]
+                ),
                 json.dumps([section.model_dump() for section in project.sections]),
                 project.created_at.isoformat(),
                 project.updated_at.isoformat(),
@@ -167,7 +172,12 @@ def update_farm_project(
                 project.name,
                 project.center_latitude,
                 project.center_longitude,
-                json.dumps([point.model_dump() for point in project.boundary]),
+                json.dumps(
+                    [
+                        [point.model_dump() for point in boundary]
+                        for boundary in project.boundaries
+                    ]
+                ),
                 json.dumps([section.model_dump() for section in project.sections]),
                 project.updated_at.isoformat(),
                 project.id,
@@ -200,12 +210,15 @@ def get_farm_project(owner_id: str, project_id: str) -> FarmProject | None:
 
 
 def _project_from_row(row: sqlite3.Row) -> FarmProject:
+    stored_boundaries = json.loads(row["boundary_json"])
+    if stored_boundaries and isinstance(stored_boundaries[0], dict):
+        stored_boundaries = [stored_boundaries]
     return FarmProject(
         id=row["id"],
         name=row["name"],
         center_latitude=row["center_latitude"],
         center_longitude=row["center_longitude"],
-        boundary=json.loads(row["boundary_json"]),
+        boundaries=stored_boundaries,
         sections=json.loads(row["sections_json"]),
         created_at=datetime.fromisoformat(row["created_at"]),
         updated_at=datetime.fromisoformat(row["updated_at"]),

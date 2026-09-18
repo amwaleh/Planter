@@ -104,7 +104,7 @@ def test_project_api_create_update_and_reload(
             "name": "API farm",
             "center_latitude": -1.03,
             "center_longitude": 36.04,
-            "boundary": boundary,
+            "boundaries": [boundary],
             "sections": [
                 {
                     "name": "North field",
@@ -122,13 +122,18 @@ def test_project_api_create_update_and_reload(
         *boundary,
         {"latitude": -1.1, "longitude": 36.0},
     ]
+    second_boundary = [
+        {"latitude": -1.2, "longitude": 36.2},
+        {"latitude": -1.2, "longitude": 36.3},
+        {"latitude": -1.3, "longitude": 36.3},
+    ]
     updated = client.put(
         f"/api/v1/projects/{project_id}",
         json={
             "name": "API farm",
             "center_latitude": -1.04,
             "center_longitude": 36.05,
-            "boundary": updated_boundary,
+            "boundaries": [updated_boundary, second_boundary],
             "sections": [
                 {
                     "name": "South field",
@@ -143,7 +148,7 @@ def test_project_api_create_update_and_reload(
 
     reloaded = client.get(f"/api/v1/projects/{project_id}")
     assert reloaded.status_code == 200
-    assert reloaded.json()["boundary"] == updated_boundary
+    assert reloaded.json()["boundaries"] == [updated_boundary, second_boundary]
     assert reloaded.json()["sections"][0]["name"] == "South field"
     assert reloaded.json()["sections"][0]["activity"] == "Drip-irrigated vegetables"
 
@@ -156,7 +161,7 @@ def test_project_api_create_update_and_reload(
             "name": "Stolen farm",
             "center_latitude": -1.04,
             "center_longitude": 36.05,
-            "boundary": updated_boundary,
+            "boundaries": [updated_boundary, second_boundary],
             "sections": [],
         },
     ).status_code == 404

@@ -186,7 +186,7 @@ export interface FarmProjectInput {
   name: string;
   center_latitude: number;
   center_longitude: number;
-  boundary: Coordinate[];
+  boundaries: Coordinate[][];
   sections: FarmSection[];
 }
 
