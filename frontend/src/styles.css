@@ -18,11 +18,37 @@
   --danger: #a34735;
 }
 
+.project-marker {
+  background: transparent;
+  border: 0;
+}
+
+.project-marker img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.42));
+}
+
 .verification-box {
   margin-top: 18px;
   padding: 16px;
   border-radius: 12px;
   background: #fff5d8;
+}
+
+.saved-farm-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--forest) !important;
+  font-size: inherit !important;
+}
+
+.saved-farm-title img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
 }
 
 .verification-box h3,

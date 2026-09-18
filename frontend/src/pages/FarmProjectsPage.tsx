@@ -36,6 +36,7 @@ import {
   updateProject,
 } from "../api";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
+import projectIconUrl from "../assets/planter-project-icon.png";
 import type {
   Coordinate,
   FarmProject,
@@ -50,11 +51,11 @@ interface DrawRequest {
   kind: DrawKind;
 }
 
-const markerIcon = L.divIcon({
-  className: "farm-marker",
-  html: '<span aria-hidden="true"></span>',
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
+const projectMarkerIcon = L.divIcon({
+  className: "project-marker",
+  html: `<img src="${projectIconUrl}" alt="" aria-hidden="true" />`,
+  iconSize: [44, 44],
+  iconAnchor: [22, 42],
 });
 
 function coordinatesFromLayer(layer: L.Layer): Coordinate[] {
@@ -319,7 +320,7 @@ function ProjectMap({
           <FeatureGroup>
             <Marker
               position={[latitude, longitude]}
-              icon={markerIcon}
+              icon={projectMarkerIcon}
               draggable
               bubblingMouseEvents={false}
               eventHandlers={{
@@ -900,7 +901,10 @@ export default function FarmProjectsPage() {
             {projects.length === 0 && <p>No farms saved yet.</p>}
             {projects.map((project) => (
               <button className={project.id === activeProjectId ? "active" : ""} type="button" key={project.id} onClick={() => load(project)} disabled={saving}>
-                <strong>{project.name}</strong>
+                <span className="saved-farm-title">
+                  <img src={projectIconUrl} alt="" aria-hidden="true" />
+                  <strong>{project.name}</strong>
+                </span>
                 <span>{project.boundaries.length} parcels · {project.sections.length} sections</span>
                 <small>Updated {new Date(project.updated_at).toLocaleString()}</small>
               </button>
