@@ -238,6 +238,13 @@ function ProjectMap({
   const map = useMap();
   const positions = (points: Coordinate[]) =>
     points.map((point) => [point.latitude, point.longitude] as [number, number]);
+  const plannedUses = Array.from(
+    new Set(
+      sections
+        .map((section) => section.crop?.trim() || section.activity.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 3);
 
   useEffect(() => {
     map.setView([latitude, longitude], map.getZoom());
@@ -331,12 +338,33 @@ function ProjectMap({
               }}
             >
               <Tooltip>{projectName.trim() || "Farm centre"}</Tooltip>
-              <Popup>
-                <strong>{projectName.trim() || "Farm centre"}</strong>
-                <br />
-                Drag this marker or choose Move centre.
-                <br />
-                {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              <Popup minWidth={250} maxWidth={310}>
+                <div className="project-marker-popup">
+                  <div className="project-popup-heading">
+                    <img src={projectIconUrl} alt="" aria-hidden="true" />
+                    <div>
+                      <span>{geometryKey === "new" ? "Unsaved farm draft" : "Saved farm project"}</span>
+                      <strong>{projectName.trim() || "Unnamed farm"}</strong>
+                    </div>
+                  </div>
+                  <div className="project-popup-metrics">
+                    <div><strong>{boundaries.length}</strong><span>Parcel{boundaries.length === 1 ? "" : "s"}</span></div>
+                    <div><strong>{sections.length}</strong><span>Section{sections.length === 1 ? "" : "s"}</span></div>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Farm centre</dt>
+                      <dd>{latitude.toFixed(6)}, {longitude.toFixed(6)}</dd>
+                    </div>
+                    {plannedUses.length > 0 && (
+                      <div>
+                        <dt>Planned crops / uses</dt>
+                        <dd>{plannedUses.join(", ")}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  <p>Drag this marker or use <strong>Move centre</strong> to reposition it.</p>
+                </div>
               </Popup>
             </Marker>
           </FeatureGroup>
