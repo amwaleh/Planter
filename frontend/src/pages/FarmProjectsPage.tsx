@@ -51,6 +51,11 @@ interface DrawRequest {
   kind: DrawKind;
 }
 
+interface ParcelFocusRequest {
+  id: number;
+  index: number;
+}
+
 const projectMarkerIcon = L.divIcon({
   className: "project-marker",
   html: `<img src="${projectIconUrl}" alt="" aria-hidden="true" />`,
@@ -111,6 +116,16 @@ function sectionIsInsideFarm(
 ): boolean {
   return farmBoundaries.some((farmBoundary) =>
     sectionBoundary.every((point) => pointIsInsideBoundary(point, farmBoundary)),
+  );
+}
+
+function boundaryCenter(boundary: Coordinate[]): Coordinate {
+  return boundary.reduce(
+    (center, point) => ({
+      latitude: center.latitude + point.latitude / boundary.length,
+      longitude: center.longitude + point.longitude / boundary.length,
+    }),
+    { latitude: 0, longitude: 0 },
   );
 }
 
@@ -205,6 +220,7 @@ function ProjectMap({
   projectName,
   fitRequest,
   centerFocusRequest,
+  parcelFocusRequest,
   locationMode,
   drawRequest,
   cancelRequest,
@@ -224,6 +240,7 @@ function ProjectMap({
   projectName: string;
   fitRequest: number;
   centerFocusRequest: number;
+  parcelFocusRequest: ParcelFocusRequest | null;
   locationMode: boolean;
   drawRequest: DrawRequest | null;
   cancelRequest: number;
@@ -238,13 +255,6 @@ function ProjectMap({
   const map = useMap();
   const positions = (points: Coordinate[]) =>
     points.map((point) => [point.latitude, point.longitude] as [number, number]);
-  const plannedUses = Array.from(
-    new Set(
-      sections
-        .map((section) => section.crop?.trim() || section.activity.trim())
-        .filter(Boolean),
-    ),
-  ).slice(0, 3);
 
   useEffect(() => {
     map.setView([latitude, longitude], map.getZoom());
@@ -269,6 +279,16 @@ function ProjectMap({
       map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 18 });
     }
   }, [boundaries, fitRequest, latitude, longitude, map, sectionDraft, sections]);
+
+  useEffect(() => {
+    if (!parcelFocusRequest) return;
+    const boundary = boundaries[parcelFocusRequest.index];
+    if (!boundary) return;
+    map.fitBounds(L.latLngBounds(positions(boundary)), {
+      padding: [48, 48],
+      maxZoom: 18,
+    });
+  }, [boundaries, map, parcelFocusRequest]);
 
   useMapEvents({
     click(event) {
@@ -323,50 +343,95 @@ function ProjectMap({
             />
           </LayerGroup>
         </LayersControl.Overlay>
-        <LayersControl.Overlay checked name="Farm marker">
+        <LayersControl.Overlay checked name="Farm centres">
           <FeatureGroup>
-            <Marker
-              position={[latitude, longitude]}
-              icon={projectMarkerIcon}
-              draggable
-              bubblingMouseEvents={false}
-              eventHandlers={{
-                dragend(event) {
-                  const point = event.target.getLatLng();
-                  onCenterChange(point.lat, point.lng);
-                },
-              }}
-            >
-              <Tooltip>{projectName.trim() || "Farm centre"}</Tooltip>
-              <Popup minWidth={250} maxWidth={310}>
-                <div className="project-marker-popup">
-                  <div className="project-popup-heading">
-                    <img src={projectIconUrl} alt="" aria-hidden="true" />
-                    <div>
-                      <span>{geometryKey === "new" ? "Unsaved farm draft" : "Saved farm project"}</span>
-                      <strong>{projectName.trim() || "Unnamed farm"}</strong>
-                    </div>
-                  </div>
-                  <div className="project-popup-metrics">
-                    <div><strong>{boundaries.length}</strong><span>Parcel{boundaries.length === 1 ? "" : "s"}</span></div>
-                    <div><strong>{sections.length}</strong><span>Section{sections.length === 1 ? "" : "s"}</span></div>
-                  </div>
-                  <dl>
-                    <div>
-                      <dt>Farm centre</dt>
-                      <dd>{latitude.toFixed(6)}, {longitude.toFixed(6)}</dd>
-                    </div>
-                    {plannedUses.length > 0 && (
+            {boundaries.length === 0 && (
+              <Marker
+                position={[latitude, longitude]}
+                icon={projectMarkerIcon}
+                draggable
+                bubblingMouseEvents={false}
+                eventHandlers={{
+                  dragend(event) {
+                    const point = event.target.getLatLng();
+                    onCenterChange(point.lat, point.lng);
+                  },
+                }}
+              >
+                <Tooltip>{projectName.trim() || "Farm centre"}</Tooltip>
+                <Popup minWidth={250} maxWidth={310}>
+                  <div className="project-marker-popup">
+                    <div className="project-popup-heading">
+                      <img src={projectIconUrl} alt="" aria-hidden="true" />
                       <div>
-                        <dt>Planned crops / uses</dt>
-                        <dd>{plannedUses.join(", ")}</dd>
+                        <span>Unsaved farm draft</span>
+                        <strong>{projectName.trim() || "Unnamed farm"}</strong>
                       </div>
-                    )}
-                  </dl>
-                  <p>Drag this marker or use <strong>Move centre</strong> to reposition it.</p>
-                </div>
-              </Popup>
-            </Marker>
+                    </div>
+                    <dl>
+                      <div>
+                        <dt>Starting centre</dt>
+                        <dd>{latitude.toFixed(6)}, {longitude.toFixed(6)}</dd>
+                      </div>
+                    </dl>
+                    <p>Drag this marker or use <strong>Move centre</strong> before drawing a parcel.</p>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+            {boundaries.map((boundary, index) => {
+              const center = boundaryCenter(boundary);
+              const parcelSections = sections.filter((section) =>
+                sectionIsInsideFarm(section.boundary, [boundary]),
+              );
+              const parcelUses = Array.from(
+                new Set(
+                  parcelSections
+                    .map((section) => section.crop?.trim() || section.activity.trim())
+                    .filter(Boolean),
+                ),
+              ).slice(0, 3);
+              return (
+                <Marker
+                  key={`parcel-marker-${geometryKey}-${index}`}
+                  position={[center.latitude, center.longitude]}
+                  icon={projectMarkerIcon}
+                  bubblingMouseEvents={false}
+                >
+                  <Tooltip>
+                    {projectName.trim() || "Farm"} · parcel {index + 1}
+                  </Tooltip>
+                  <Popup minWidth={250} maxWidth={310}>
+                    <div className="project-marker-popup">
+                      <div className="project-popup-heading">
+                        <img src={projectIconUrl} alt="" aria-hidden="true" />
+                        <div>
+                          <span>{geometryKey === "new" ? "Unsaved parcel" : "Saved farm parcel"}</span>
+                          <strong>{projectName.trim() || "Unnamed farm"} · Parcel {index + 1}</strong>
+                        </div>
+                      </div>
+                      <div className="project-popup-metrics">
+                        <div><strong>{boundary.length}</strong><span>Boundary points</span></div>
+                        <div><strong>{parcelSections.length}</strong><span>Sections</span></div>
+                      </div>
+                      <dl>
+                        <div>
+                          <dt>Parcel centre</dt>
+                          <dd>{center.latitude.toFixed(6)}, {center.longitude.toFixed(6)}</dd>
+                        </div>
+                        {parcelUses.length > 0 && (
+                          <div>
+                            <dt>Planned crops / uses</dt>
+                            <dd>{parcelUses.join(", ")}</dd>
+                          </div>
+                        )}
+                      </dl>
+                      <p>This marker follows the parcel boundary when it is edited.</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
           </FeatureGroup>
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Farm boundary">
@@ -467,6 +532,7 @@ export default function FarmProjectsPage() {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [fitRequest, setFitRequest] = useState(0);
   const [centerFocusRequest, setCenterFocusRequest] = useState(0);
+  const [parcelFocusRequest, setParcelFocusRequest] = useState<ParcelFocusRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [placeQuery, setPlaceQuery] = useState("");
@@ -794,6 +860,7 @@ export default function FarmProjectsPage() {
                 projectName={projectName}
                 fitRequest={fitRequest}
                 centerFocusRequest={centerFocusRequest}
+                parcelFocusRequest={parcelFocusRequest}
                 locationMode={locationMode}
                 drawRequest={drawRequest}
                 cancelRequest={cancelRequest}
@@ -879,20 +946,29 @@ export default function FarmProjectsPage() {
               </div>
               {boundaries.map((boundary, index) => (
                 <div className="boundary-summary" key={`boundary-${index}`}>
-                  <span>Parcel {index + 1} · {boundary.length} boundary points</span>
                   <button
+                    className="boundary-focus-link"
                     type="button"
-                    onClick={() => {
-                      const remaining = boundaries.filter((_, boundaryIndex) => boundaryIndex !== index);
-                      if (sections.some((section) => !sectionIsInsideFarm(section.boundary, remaining))) {
-                        setMessage("Remove or move sections in this parcel before removing it.");
-                        return;
-                      }
-                      setBoundaries(remaining);
-                    }}
+                    onClick={() => setParcelFocusRequest({ id: Date.now(), index })}
                   >
-                    Remove parcel
+                    <MapPin size={14} />
+                    Parcel {index + 1} · {boundary.length} boundary points
                   </button>
+                  <div className="boundary-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const remaining = boundaries.filter((_, boundaryIndex) => boundaryIndex !== index);
+                        if (sections.some((section) => !sectionIsInsideFarm(section.boundary, remaining))) {
+                          setMessage("Remove or move sections in this parcel before removing it.");
+                          return;
+                        }
+                        setBoundaries(remaining);
+                      }}
+                    >
+                      Remove parcel
+                    </button>
+                  </div>
                 </div>
               ))}
               <div className="section-editor">

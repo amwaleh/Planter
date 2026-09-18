@@ -1251,6 +1251,25 @@ nav a {
   font-weight: 800;
 }
 
+.boundary-summary .boundary-focus-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  color: var(--forest);
+  font-weight: 800;
+  text-align: left;
+}
+
+.boundary-summary .boundary-focus-link:hover {
+  color: var(--leaf);
+  text-decoration: underline;
+}
+
+.boundary-actions {
+  flex: 0 0 auto;
+}
+
 .saved-projects {
   display: grid;
   align-content: start;
