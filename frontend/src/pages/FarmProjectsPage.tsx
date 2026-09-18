@@ -607,13 +607,13 @@ export default function FarmProjectsPage() {
       );
       setLatitude(center.latitude);
       setLongitude(center.longitude);
+      setFitRequest((request) => request + 1);
     } else {
       setSectionDraft(points);
       setMessage("Section shape captured. Add its name and activity, then choose Add section.");
     }
     setDrawRequest(null);
     setLocationMode(false);
-    setFitRequest((request) => request + 1);
   }, []);
 
   const endDrawing = useCallback(() => setDrawRequest(null), []);
@@ -630,29 +630,58 @@ export default function FarmProjectsPage() {
     );
   };
 
-  const addSection = () => {
+  const addSection = async () => {
+    if (saving) return;
     if (sectionDraft.length < 3 || !sectionName.trim() || !sectionActivity.trim()) {
       setMessage("Draw a section and enter its name and planned activity.");
+      return;
+    }
+    if (!projectName.trim()) {
+      setMessage("Enter a project name before adding the section.");
       return;
     }
     if (!sectionIsInsideFarm(sectionDraft, boundaries)) {
       setMessage("The section must be fully inside one farm parcel.");
       return;
     }
-    setSections((current) => [
-      ...current,
+    const nextSections = [
+      ...sections,
       {
         name: sectionName.trim(),
         activity: sectionActivity.trim(),
         crop: sectionCrop.trim() || null,
         boundary: sectionDraft,
       },
-    ]);
-    setSectionDraft([]);
-    setSectionName("");
-    setSectionActivity("");
-    setSectionCrop("");
-    setMessage("Section added to this project. Save the project to persist it.");
+    ];
+    const payload = {
+      name: projectName.trim(),
+      center_latitude: latitude,
+      center_longitude: longitude,
+      boundaries,
+      sections: nextSections,
+    };
+    try {
+      setSaving(true);
+      const accessToken = await getAccessToken();
+      const saved = activeProjectId
+        ? await updateProject(activeProjectId, payload, accessToken)
+        : await createProject(payload, accessToken);
+      setActiveProjectId(saved.id);
+      setSections(saved.sections);
+      setProjects((current) => {
+        const remaining = current.filter((project) => project.id !== saved.id);
+        return [saved, ...remaining];
+      });
+      setSectionDraft([]);
+      setSectionName("");
+      setSectionActivity("");
+      setSectionCrop("");
+      setMessage(`Section added and ${saved.name} saved.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The section could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const save = async () => {
@@ -994,7 +1023,9 @@ export default function FarmProjectsPage() {
                 <datalist id="project-crops">{cropOptions.map((crop) => <option key={crop} value={crop} />)}</datalist>
                 <div className="form-actions">
                   {sectionDraft.length >= 3 && <button type="button" onClick={() => setSectionDraft([])}>Redraw</button>}
-                  <button type="button" onClick={addSection} disabled={sectionDraft.length < 3}>Add section</button>
+                  <button type="button" onClick={() => void addSection()} disabled={sectionDraft.length < 3 || saving}>
+                    {saving ? "Saving..." : "Add section"}
+                  </button>
                 </div>
               </div>
               <div className="form-actions">
