@@ -119,6 +119,8 @@ def test_project_api_create_update_and_reload(
                     "name": "Main gate",
                     "category": "Gate",
                     "notes": "Vehicle entrance",
+                    "color": "#8a5a2b",
+                    "image_data_url": None,
                     "position": {"latitude": -1.03, "longitude": 36.04},
                 }
             ],
@@ -157,6 +159,8 @@ def test_project_api_create_update_and_reload(
                     "name": "Produce store",
                     "category": "Storage",
                     "notes": None,
+                    "color": "#4f7b52",
+                    "image_data_url": "data:image/png;base64,aGVsbG8=",
                     "position": {"latitude": -1.04, "longitude": 36.05},
                 }
             ],
@@ -170,6 +174,7 @@ def test_project_api_create_update_and_reload(
     assert reloaded.json()["sections"][0]["name"] == "South field"
     assert reloaded.json()["sections"][0]["activity"] == "Drip-irrigated vegetables"
     assert reloaded.json()["markers"][0]["name"] == "Produce store"
+    assert reloaded.json()["markers"][0]["image_data_url"] == "data:image/png;base64,aGVsbG8="
 
     authenticated_as("user-b")
     assert client.get("/api/v1/projects").json() == []

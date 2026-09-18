@@ -1,3 +1,5 @@
+import base64
+import binascii
 from datetime import datetime
 from typing import Literal
 
@@ -335,7 +337,28 @@ class FarmMarker(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     category: str = Field(min_length=1, max_length=50)
     notes: str | None = Field(default=None, max_length=300)
+    color: str = Field(default="#4f7b52", pattern=r"^#[0-9a-fA-F]{6}$")
+    image_data_url: str | None = Field(default=None, max_length=1_500_000)
     position: Coordinate
+
+    @field_validator("image_data_url")
+    @classmethod
+    def validate_marker_image(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        allowed_prefixes = (
+            "data:image/png;base64,",
+            "data:image/jpeg;base64,",
+            "data:image/webp;base64,",
+            "data:image/gif;base64,",
+        )
+        if not value.startswith(allowed_prefixes):
+            raise ValueError("Marker image must be a PNG, JPEG, WebP, or GIF data URL.")
+        try:
+            base64.b64decode(value.split(",", 1)[1], validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise ValueError("Marker image contains invalid base64 data.") from error
+        return value
 
 
 class FarmProjectCreate(BaseModel):
@@ -350,7 +373,7 @@ class FarmProjectCreate(BaseModel):
     )
     boundaries: list[list[Coordinate]] = Field(min_length=1)
     sections: list[FarmSection] = Field(default_factory=list)
-    markers: list[FarmMarker] = Field(default_factory=list)
+    markers: list[FarmMarker] = Field(default_factory=list, max_length=100)
 
     @model_validator(mode="before")
     @classmethod

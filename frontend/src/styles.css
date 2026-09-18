@@ -1255,7 +1255,7 @@ nav a {
   display: grid;
   place-items: center;
   color: white;
-  background: var(--leaf);
+  background: var(--marker-color, var(--leaf));
   font-weight: 900;
 }
 
@@ -1274,15 +1274,17 @@ nav a {
   left: 8px;
   width: 0;
   height: 0;
-  border-top: 10px solid var(--leaf);
+  border-top: 10px solid var(--marker-color, var(--leaf));
   border-right: 5px solid transparent;
   border-left: 5px solid transparent;
   content: "";
 }
 
 .custom-marker-popup {
+  position: relative;
   display: grid;
   gap: 5px;
+  padding-right: 26px;
 }
 
 .custom-marker-popup > span {
@@ -1297,6 +1299,132 @@ nav a {
   margin: 2px 0 0;
 }
 
+.custom-marker-popup-image {
+  width: 100%;
+  max-height: 140px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.custom-marker-popup button {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  color: var(--leaf);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.custom-marker-popup .marker-popup-edit {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 7px;
+  color: var(--leaf);
+  background: #e5eee0;
+}
+
+.custom-image-marker {
+  border: 3px solid white;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 4px 12px rgba(23, 63, 42, 0.35);
+  object-fit: cover;
+}
+
+.marker-draft-icon {
+  filter: drop-shadow(0 0 5px #ffd34d);
+}
+
+.marker-popup-form {
+  display: grid;
+  gap: 10px;
+}
+
+.marker-popup-form > strong {
+  color: var(--forest);
+  font-size: 14px;
+}
+
+.marker-popup-form label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.marker-popup-form input,
+.marker-popup-form select,
+.marker-popup-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 9px;
+  color: var(--forest);
+  background: white;
+  font: inherit;
+  text-transform: none;
+}
+
+.marker-popup-form input[type="color"] {
+  height: 38px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.marker-image-preview {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.marker-image-preview img,
+.marker-list-image {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.marker-image-preview button {
+  border: 0;
+  padding: 0;
+  color: #8a3c2d;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.marker-popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.marker-popup-actions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--forest);
+  background: white;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.marker-popup-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .marker-list {
   display: grid;
   gap: 7px;
@@ -1304,7 +1432,7 @@ nav a {
 
 .marker-list article {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 9px;
   padding: 9px;
@@ -1332,6 +1460,10 @@ nav a {
   color: #8a3c2d;
   background: transparent;
   cursor: pointer;
+}
+
+.marker-list .marker-edit-button {
+  color: var(--leaf);
 }
 
 .boundary-summary {

@@ -75,11 +75,26 @@ const projectMarkerIcon = L.divIcon({
   iconAnchor: [22, 42],
 });
 
-function customMarkerIcon(category: string) {
+function customMarkerIcon(
+  category: string,
+  color = "#4f7b52",
+  imageDataUrl: string | null = null,
+  draft = false,
+) {
+  if (imageDataUrl?.match(/^data:image\/(?:png|jpeg|webp|gif);base64,/)) {
+    return L.icon({
+      iconUrl: imageDataUrl,
+      className: `custom-image-marker${draft ? " marker-draft-icon" : ""}`,
+      iconSize: [42, 42],
+      iconAnchor: [21, 40],
+      popupAnchor: [0, -36],
+    });
+  }
   const symbol = markerSymbols[category] ?? markerSymbols.Other;
+  const safeColor = /^#[0-9a-f]{6}$/i.test(color) ? color : "#4f7b52";
   return L.divIcon({
-    className: "custom-farm-marker",
-    html: `<span>${symbol}</span>`,
+    className: `custom-farm-marker${draft ? " marker-draft-icon" : ""}`,
+    html: `<span style="--marker-color:${safeColor}">${symbol}</span>`,
     iconSize: [34, 42],
     iconAnchor: [17, 40],
     popupAnchor: [0, -36],
@@ -89,6 +104,145 @@ function customMarkerIcon(category: string) {
 function createMarkerId() {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   return `marker-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function MarkerDraftForm({
+  position,
+  name,
+  category,
+  notes,
+  color,
+  imageDataUrl,
+  editing,
+  saving,
+  onNameChange,
+  onCategoryChange,
+  onNotesChange,
+  onColorChange,
+  onImageSelected,
+  onImageRemove,
+  onPositionChange,
+  onCancel,
+  onSave,
+}: {
+  position: Coordinate;
+  name: string;
+  category: string;
+  notes: string;
+  color: string;
+  imageDataUrl: string | null;
+  editing: boolean;
+  saving: boolean;
+  onNameChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+  onColorChange: (value: string) => void;
+  onImageSelected: (file: File) => void;
+  onImageRemove: () => void;
+  onPositionChange: (position: Coordinate) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const markerRef = useRef<L.Marker | null>(null);
+
+  useEffect(() => {
+    markerRef.current?.openPopup();
+  }, []);
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={[position.latitude, position.longitude]}
+      icon={customMarkerIcon(category, color, imageDataUrl, true)}
+      draggable
+      eventHandlers={{
+        dragend(event) {
+          const point = event.target.getLatLng();
+          onPositionChange({
+            latitude: point.lat,
+            longitude: point.lng,
+          });
+        },
+      }}
+    >
+      <Tooltip permanent direction="top">Unsaved marker</Tooltip>
+      <Popup
+        minWidth={260}
+        closeOnClick={false}
+        closeButton={false}
+        autoClose={false}
+        closeOnEscapeKey={false}
+        autoPan
+      >
+        <form
+          className="marker-popup-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSave();
+          }}
+        >
+          <strong>{editing ? "Edit map marker" : "New map marker"}</strong>
+          <label>
+            Marker type
+            <select value={category} onChange={(event) => onCategoryChange(event.target.value)}>
+              {Object.keys(markerSymbols).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Marker name
+            <input
+              autoFocus
+              maxLength={100}
+              value={name}
+              onChange={(event) => onNameChange(event.target.value)}
+              placeholder="e.g. Main borehole"
+              required
+            />
+          </label>
+          <label>
+            Notes
+            <textarea
+              maxLength={300}
+              value={notes}
+              onChange={(event) => onNotesChange(event.target.value)}
+              placeholder="Optional marker details"
+              rows={2}
+            />
+          </label>
+          <label>
+            Marker color
+            <input type="color" value={color} onChange={(event) => onColorChange(event.target.value)} />
+          </label>
+          <label>
+            Marker image
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) onImageSelected(file);
+              }}
+            />
+          </label>
+          {imageDataUrl && (
+            <div className="marker-image-preview">
+              <img src={imageDataUrl} alt="Marker preview" />
+              <button type="button" onClick={onImageRemove}>Remove image</button>
+            </div>
+          )}
+          <div className="marker-popup-actions">
+            <button type="button" onClick={onCancel} disabled={saving}>Cancel</button>
+            <button className="primary-button" type="submit" disabled={saving || !name.trim()}>
+              {saving ? "Saving..." : "Save marker"}
+            </button>
+          </div>
+        </form>
+      </Popup>
+    </Marker>
+  );
 }
 
 function coordinatesFromLayer(layer: L.Layer): Coordinate[] {
@@ -261,6 +415,14 @@ function ProjectMap({
   sections,
   editingSectionIndex,
   markers,
+  markerDraftPosition,
+  markerName,
+  markerCategory,
+  markerNotes,
+  markerColor,
+  markerImageDataUrl,
+  editingMarkerIndex,
+  saving,
   projectName,
   fitRequest,
   centerFocusRequest,
@@ -272,8 +434,18 @@ function ProjectMap({
   resetEditRequest,
   geometryKey,
   onCenterChange,
-  onMarkerPlaced,
+  onMarkerPositionSelected,
   onMarkerChange,
+  onMarkerNameChange,
+  onMarkerCategoryChange,
+  onMarkerNotesChange,
+  onMarkerColorChange,
+  onMarkerImageSelected,
+  onMarkerImageRemove,
+  onMarkerDraftPositionChange,
+  onMarkerDraftCancel,
+  onMarkerSave,
+  onMarkerEdit,
   onShapeCreated,
   onDrawEnded,
   onBoundaryChange,
@@ -286,6 +458,14 @@ function ProjectMap({
   sections: FarmSection[];
   editingSectionIndex: number | null;
   markers: FarmMarker[];
+  markerDraftPosition: Coordinate | null;
+  markerName: string;
+  markerCategory: string;
+  markerNotes: string;
+  markerColor: string;
+  markerImageDataUrl: string | null;
+  editingMarkerIndex: number | null;
+  saving: boolean;
   projectName: string;
   fitRequest: number;
   centerFocusRequest: number;
@@ -297,8 +477,18 @@ function ProjectMap({
   resetEditRequest: number;
   geometryKey: string;
   onCenterChange: (latitude: number, longitude: number) => void;
-  onMarkerPlaced: (position: Coordinate) => void;
+  onMarkerPositionSelected: (position: Coordinate) => void;
   onMarkerChange: (index: number, position: Coordinate) => void;
+  onMarkerNameChange: (value: string) => void;
+  onMarkerCategoryChange: (value: string) => void;
+  onMarkerNotesChange: (value: string) => void;
+  onMarkerColorChange: (value: string) => void;
+  onMarkerImageSelected: (file: File) => void;
+  onMarkerImageRemove: () => void;
+  onMarkerDraftPositionChange: (position: Coordinate) => void;
+  onMarkerDraftCancel: () => void;
+  onMarkerSave: () => void;
+  onMarkerEdit: (index: number) => void;
   onShapeCreated: (kind: DrawKind, points: Coordinate[]) => void;
   onDrawEnded: () => void;
   onBoundaryChange: (index: number, points: Coordinate[]) => void;
@@ -351,7 +541,7 @@ function ProjectMap({
   useMapEvents({
     click(event) {
       if (markerPlacement && !drawRequest) {
-        onMarkerPlaced({
+        onMarkerPositionSelected({
           latitude: event.latlng.lat,
           longitude: event.latlng.lng,
         });
@@ -548,11 +738,11 @@ function ProjectMap({
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Custom markers">
           <FeatureGroup>
-            {markers.map((marker, index) => (
+            {markers.map((marker, index) => editingMarkerIndex === index ? null : (
               <Marker
                 key={marker.id}
                 position={[marker.position.latitude, marker.position.longitude]}
-                icon={customMarkerIcon(marker.category)}
+                icon={customMarkerIcon(marker.category, marker.color, marker.image_data_url)}
                 draggable={!drawRequest && !markerPlacement}
                 eventHandlers={{
                   dragend(event) {
@@ -569,7 +759,17 @@ function ProjectMap({
                   <div className="custom-marker-popup">
                     <span>{marker.category}</span>
                     <strong>{marker.name}</strong>
+                    {marker.image_data_url && <img className="custom-marker-popup-image" src={marker.image_data_url} alt="" />}
                     {marker.notes && <p>{marker.notes}</p>}
+                    <button
+                      className="marker-popup-edit"
+                      type="button"
+                      aria-label={`Edit ${marker.name}`}
+                      title="Edit marker"
+                      onClick={() => onMarkerEdit(index)}
+                    >
+                      <Pencil size={15} />
+                    </button>
                   </div>
                 </Popup>
               </Marker>
@@ -577,6 +777,27 @@ function ProjectMap({
           </FeatureGroup>
         </LayersControl.Overlay>
       </LayersControl>
+      {markerDraftPosition && (
+        <MarkerDraftForm
+          position={markerDraftPosition}
+          name={markerName}
+          category={markerCategory}
+          notes={markerNotes}
+          color={markerColor}
+          imageDataUrl={markerImageDataUrl}
+          editing={editingMarkerIndex !== null}
+          saving={saving}
+          onNameChange={onMarkerNameChange}
+          onCategoryChange={onMarkerCategoryChange}
+          onNotesChange={onMarkerNotesChange}
+          onColorChange={onMarkerColorChange}
+          onImageSelected={onMarkerImageSelected}
+          onImageRemove={onMarkerImageRemove}
+          onPositionChange={onMarkerDraftPositionChange}
+          onCancel={onMarkerDraftCancel}
+          onSave={onMarkerSave}
+        />
+      )}
     </>
   );
 }
@@ -613,7 +834,11 @@ export default function FarmProjectsPage() {
   const [markerName, setMarkerName] = useState("");
   const [markerCategory, setMarkerCategory] = useState("Water");
   const [markerNotes, setMarkerNotes] = useState("");
+  const [markerColor, setMarkerColor] = useState("#4f7b52");
+  const [markerImageDataUrl, setMarkerImageDataUrl] = useState<string | null>(null);
+  const [editingMarkerIndex, setEditingMarkerIndex] = useState<number | null>(null);
   const [markerPlacement, setMarkerPlacement] = useState(false);
+  const [markerDraftPosition, setMarkerDraftPosition] = useState<Coordinate | null>(null);
   const [cropOptions, setCropOptions] = useState<string[]>([]);
   const [projects, setProjects] = useState<FarmProject[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -712,6 +937,8 @@ export default function FarmProjectsPage() {
     }
     setLocationMode(false);
     setMarkerPlacement(false);
+    setMarkerDraftPosition(null);
+    setEditingMarkerIndex(null);
     setDrawRequest({ id: Date.now(), kind });
     setMessage(
       `Draw the ${kind === "farm" ? "farm boundary" : "section"} on the map. Tap the first point or press Enter to finish.`,
@@ -828,6 +1055,8 @@ export default function FarmProjectsPage() {
     setSectionDraft([]);
     setEditingSectionIndex(null);
     setMarkerPlacement(false);
+    setMarkerDraftPosition(null);
+    setEditingMarkerIndex(null);
     setDrawRequest(null);
     setLocationMode(false);
     setResetEditRequest((request) => request + 1);
@@ -845,6 +1074,8 @@ export default function FarmProjectsPage() {
     setSectionDraft([]);
     setEditingSectionIndex(null);
     setMarkerPlacement(false);
+    setMarkerDraftPosition(null);
+    setEditingMarkerIndex(null);
     setDrawRequest(null);
     setResetEditRequest((request) => request + 1);
     setMessage("Started a new farm project.");
@@ -894,36 +1125,99 @@ export default function FarmProjectsPage() {
   };
 
   const placeMarker = () => {
-    if (!markerName.trim()) {
-      setMessage("Enter a marker name before placing it.");
-      return;
-    }
     if (!projectName.trim() || boundaries.length === 0) {
       setMessage("Enter a farm name and draw a farm parcel before adding markers.");
       return;
     }
+    if (sections.some((section) => !sectionIsInsideFarm(section.boundary, boundaries))) {
+      setMessage("Move every section fully inside one farm parcel before adding a marker.");
+      return;
+    }
+    setMarkerName("");
+    setMarkerCategory("Water");
+    setMarkerNotes("");
+    setMarkerColor("#4f7b52");
+    setMarkerImageDataUrl(null);
+    setEditingMarkerIndex(null);
+    setMarkerDraftPosition(null);
     setDrawRequest(null);
     setLocationMode(false);
     setMarkerPlacement(true);
-    setMessage(`Tap the map to place ${markerName.trim()}.`);
+    setMessage("Tap the map where you want to add the marker.");
   };
 
-  const finishMarkerPlacement = async (position: Coordinate) => {
-    if (saving || !markerPlacement) return;
+  const selectMarkerPosition = (position: Coordinate) => {
     setMarkerPlacement(false);
+    setMarkerDraftPosition(position);
+    setMessage("Enter the marker details in the map popup, then choose Save marker.");
+  };
+
+  const cancelMarkerDraft = () => {
+    setMarkerDraftPosition(null);
+    setEditingMarkerIndex(null);
+    setMarkerName("");
+    setMarkerNotes("");
+    setMarkerImageDataUrl(null);
+    setMessage("Marker cancelled.");
+  };
+
+  const editMarker = (index: number) => {
+    const marker = markers[index];
+    if (!marker) return;
+    setMarkerPlacement(false);
+    setEditingMarkerIndex(index);
+    setMarkerDraftPosition(marker.position);
+    setMarkerName(marker.name);
+    setMarkerCategory(marker.category);
+    setMarkerNotes(marker.notes ?? "");
+    setMarkerColor(marker.color ?? "#4f7b52");
+    setMarkerImageDataUrl(marker.image_data_url ?? null);
+    setMessage(`Editing ${marker.name}. Update the popup and choose Save marker.`);
+  };
+
+  const selectMarkerImage = (file: File) => {
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      setMessage("Choose a PNG, JPEG, WebP, or GIF marker image.");
+      return;
+    }
+    if (file.size > 1_000_000) {
+      setMessage("Marker images must be 1 MB or smaller.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") setMarkerImageDataUrl(reader.result);
+    });
+    reader.addEventListener("error", () => setMessage("The marker image could not be read."));
+    reader.readAsDataURL(file);
+  };
+
+  const saveMarker = async () => {
+    if (saving || !markerDraftPosition || !markerName.trim()) return;
     try {
       if (sections.some((section) => !sectionIsInsideFarm(section.boundary, boundaries))) {
         setMessage("Every section must remain fully inside one farm parcel before adding a marker.");
         return;
       }
       const marker: FarmMarker = {
-        id: createMarkerId(),
+        id:
+          editingMarkerIndex === null
+            ? createMarkerId()
+            : markers[editingMarkerIndex]?.id ?? createMarkerId(),
         name: markerName.trim(),
         category: markerCategory,
         notes: markerNotes.trim() || null,
-        position,
+        color: markerColor,
+        image_data_url: markerImageDataUrl,
+        position: markerDraftPosition,
       };
-      const nextMarkers = [...markers, marker];
+      const nextMarkers =
+        editingMarkerIndex === null
+          ? [...markers, marker]
+          : markers.map((current, index) =>
+              index === editingMarkerIndex ? marker : current,
+            );
       const payload = {
         name: projectName.trim(),
         center_latitude: latitude,
@@ -945,7 +1239,12 @@ export default function FarmProjectsPage() {
       });
       setMarkerName("");
       setMarkerNotes("");
-      setMessage(`${marker.name} added and ${saved.name} saved.`);
+      setMarkerImageDataUrl(null);
+      setMarkerDraftPosition(null);
+      setEditingMarkerIndex(null);
+      setMessage(
+        `${marker.name} ${editingMarkerIndex === null ? "added" : "updated"} and ${saved.name} saved.`,
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The marker could not be saved.");
     } finally {
@@ -961,6 +1260,18 @@ export default function FarmProjectsPage() {
     );
     setMessage("Marker moved. Choose Save changes to persist its new position.");
   }, []);
+
+  const removeMarker = (index: number) => {
+    const marker = markers[index];
+    if (!marker) return;
+    setMarkers((current) => current.filter((_, markerIndex) => markerIndex !== index));
+    if (editingMarkerIndex === index) {
+      cancelMarkerDraft();
+    } else if (editingMarkerIndex !== null && index < editingMarkerIndex) {
+      setEditingMarkerIndex(editingMarkerIndex - 1);
+    }
+    setMessage(`${marker.name} removed. Choose Save changes to persist this update.`);
+  };
 
   const submitAuthentication = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -1086,6 +1397,14 @@ export default function FarmProjectsPage() {
                 sections={sections}
                 editingSectionIndex={editingSectionIndex}
                 markers={markers}
+                markerDraftPosition={markerDraftPosition}
+                markerName={markerName}
+                markerCategory={markerCategory}
+                markerNotes={markerNotes}
+                markerColor={markerColor}
+                markerImageDataUrl={markerImageDataUrl}
+                editingMarkerIndex={editingMarkerIndex}
+                saving={saving}
                 projectName={projectName}
                 fitRequest={fitRequest}
                 centerFocusRequest={centerFocusRequest}
@@ -1097,8 +1416,18 @@ export default function FarmProjectsPage() {
                 resetEditRequest={resetEditRequest}
                 geometryKey={activeProjectId ?? "new"}
                 onCenterChange={setCenter}
-                onMarkerPlaced={(position) => void finishMarkerPlacement(position)}
+                onMarkerPositionSelected={selectMarkerPosition}
                 onMarkerChange={updateMarkerPosition}
+                onMarkerNameChange={setMarkerName}
+                onMarkerCategoryChange={setMarkerCategory}
+                onMarkerNotesChange={setMarkerNotes}
+                onMarkerColorChange={setMarkerColor}
+                onMarkerImageSelected={selectMarkerImage}
+                onMarkerImageRemove={() => setMarkerImageDataUrl(null)}
+                onMarkerDraftPositionChange={setMarkerDraftPosition}
+                onMarkerDraftCancel={cancelMarkerDraft}
+                onMarkerSave={() => void saveMarker()}
+                onMarkerEdit={editMarker}
                 onShapeCreated={finishDrawing}
                 onDrawEnded={endDrawing}
                 onBoundaryChange={updateFarmBoundary}
@@ -1140,6 +1469,7 @@ export default function FarmProjectsPage() {
                 onClick={() => {
                   setDrawRequest(null);
                   setMarkerPlacement(false);
+                  cancelMarkerDraft();
                   setLocationMode(true);
                   setCenterFocusRequest((request) => request + 1);
                   setMessage("The map is focused on the centre. Tap to move it, or drag the marker.");
@@ -1153,13 +1483,22 @@ export default function FarmProjectsPage() {
               <button className={drawRequest?.kind === "section" ? "active" : ""} type="button" onClick={() => startDrawing("section")} disabled={boundaries.length === 0}>
                 <Plus size={16} /> Draw section
               </button>
+              <button className={markerPlacement ? "active" : ""} type="button" onClick={placeMarker} disabled={boundaries.length === 0 || saving}>
+                <MapPin size={16} /> Add marker
+              </button>
               {drawRequest && (
                 <button type="button" onClick={() => setCancelRequest((request) => request + 1)}>
                   <X size={16} /> Cancel drawing
                 </button>
               )}
-              {markerPlacement && (
-                <button type="button" onClick={() => setMarkerPlacement(false)}>
+              {(markerPlacement || markerDraftPosition) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMarkerPlacement(false);
+                    cancelMarkerDraft();
+                  }}
+                >
                   <X size={16} /> Cancel marker
                 </button>
               )}
@@ -1252,51 +1591,43 @@ export default function FarmProjectsPage() {
                   </button>
                 </div>
               </div>
-              <div className="marker-editor">
-                <h3>Add a custom map marker</h3>
-                <label>
-                  Marker type
-                  <select value={markerCategory} onChange={(event) => setMarkerCategory(event.target.value)}>
-                    {Object.keys(markerSymbols).map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Marker name
-                  <input maxLength={100} value={markerName} onChange={(event) => setMarkerName(event.target.value)} placeholder="e.g. Main borehole" />
-                </label>
-                <label>
-                  Notes
-                  <textarea maxLength={300} value={markerNotes} onChange={(event) => setMarkerNotes(event.target.value)} placeholder="Optional marker details" rows={2} />
-                </label>
-                <button className={markerPlacement ? "secondary-button active" : "secondary-button"} type="button" onClick={placeMarker} disabled={saving}>
-                  <MapPin size={16} /> {markerPlacement ? "Tap map to place" : "Place marker on map"}
-                </button>
-                {markers.length > 0 && (
+              {markers.length > 0 && (
+                <div className="marker-editor">
+                  <h3>Map markers</h3>
                   <div className="marker-list">
                     {markers.map((marker, index) => (
                       <article key={marker.id}>
-                        <span className="marker-list-symbol">{markerSymbols[marker.category] ?? markerSymbols.Other}</span>
+                        {marker.image_data_url ? (
+                          <img className="marker-list-image" src={marker.image_data_url} alt="" />
+                        ) : (
+                          <span className="marker-list-symbol" style={{ background: marker.color }}>
+                            {markerSymbols[marker.category] ?? markerSymbols.Other}
+                          </span>
+                        )}
                         <div>
                           <strong>{marker.name}</strong>
                           <small>{marker.category}{marker.notes ? ` · ${marker.notes}` : ""}</small>
                         </div>
                         <button
+                          className="marker-edit-button"
+                          type="button"
+                          aria-label={`Edit ${marker.name}`}
+                          onClick={() => editMarker(index)}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
                           type="button"
                           aria-label={`Remove ${marker.name}`}
-                          onClick={() => {
-                            setMarkers((current) => current.filter((_, markerIndex) => markerIndex !== index));
-                            setMessage("Marker removed. Choose Save changes to persist this update.");
-                          }}
+                          onClick={() => removeMarker(index)}
                         >
                           <Trash2 size={16} />
                         </button>
                       </article>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
               <div className="form-actions">
                 <button type="button" onClick={newProject} disabled={saving}>New project</button>
                 <button className="primary-button" type="button" onClick={save} disabled={saving}>

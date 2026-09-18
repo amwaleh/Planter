@@ -187,6 +187,8 @@ export interface FarmMarker {
   name: string;
   category: string;
   notes: string | null;
+  color: string;
+  image_data_url: string | null;
   position: Coordinate;
 }
 

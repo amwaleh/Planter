@@ -41,6 +41,8 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
                     name="Main borehole",
                     category="Water",
                     notes="Solar pump",
+                    color="#2878b5",
+                    image_data_url="data:image/png;base64,aGVsbG8=",
                     position=Coordinate(latitude=-1.03, longitude=36.04),
                 )
             ],
@@ -52,6 +54,8 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
     assert loaded.name == "Demo farm"
     assert loaded.sections[0].activity == "Planting maize"
     assert loaded.markers[0].name == "Main borehole"
+    assert loaded.markers[0].color == "#2878b5"
+    assert loaded.markers[0].image_data_url == "data:image/png;base64,aGVsbG8="
 
     second_boundary = [
         Coordinate(latitude=-1.2, longitude=36.2),
