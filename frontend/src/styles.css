@@ -1156,6 +1156,7 @@ nav a {
 
 .project-form,
 .section-editor,
+.marker-editor,
 .add-crop-rule form {
   display: grid;
   gap: 13px;
@@ -1163,6 +1164,7 @@ nav a {
 
 .project-form label,
 .section-editor label,
+.marker-editor label,
 .add-crop-rule label {
   display: grid;
   gap: 6px;
@@ -1174,6 +1176,8 @@ nav a {
 }
 
 .project-form input,
+.project-form select,
+.project-form textarea,
 .add-crop-rule input,
 .add-crop-rule textarea {
   width: 100%;
@@ -1184,11 +1188,16 @@ nav a {
   background: white;
 }
 
-.section-editor {
+.section-editor,
+.marker-editor {
   margin: 4px 0;
   padding: 16px;
   border-radius: 13px;
   background: #f2f3e9;
+}
+
+.marker-editor {
+  background: #edf3e8;
 }
 
 .secondary-button,
@@ -1229,9 +1238,100 @@ nav a {
 }
 
 .section-editor h3,
+.marker-editor h3,
+.project-form > h3,
 .saved-projects h3 {
   margin: 0;
   font-size: 13px;
+}
+
+.custom-farm-marker {
+  border: 0;
+  background: transparent;
+}
+
+.custom-farm-marker span,
+.marker-list-symbol {
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--leaf);
+  font-weight: 900;
+}
+
+.custom-farm-marker span {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(23, 63, 42, 0.35);
+}
+
+.custom-farm-marker span::after {
+  position: absolute;
+  bottom: -9px;
+  left: 8px;
+  width: 0;
+  height: 0;
+  border-top: 10px solid var(--leaf);
+  border-right: 5px solid transparent;
+  border-left: 5px solid transparent;
+  content: "";
+}
+
+.custom-marker-popup {
+  display: grid;
+  gap: 5px;
+}
+
+.custom-marker-popup > span {
+  color: var(--leaf);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.custom-marker-popup p {
+  margin: 2px 0 0;
+}
+
+.marker-list {
+  display: grid;
+  gap: 7px;
+}
+
+.marker-list article {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border-radius: 9px;
+  background: white;
+}
+
+.marker-list-symbol {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+}
+
+.marker-list article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.marker-list small {
+  color: var(--muted);
+}
+
+.marker-list button {
+  border: 0;
+  color: #8a3c2d;
+  background: transparent;
+  cursor: pointer;
 }
 
 .boundary-summary {
@@ -1343,6 +1443,12 @@ nav a {
   color: #8a3c2d;
   background: #f8ddd6;
   cursor: pointer;
+}
+
+.section-list article > .section-edit-button {
+  margin-left: auto;
+  color: var(--leaf);
+  background: #dfead9;
 }
 
 .form-message {

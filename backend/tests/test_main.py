@@ -113,6 +113,15 @@ def test_project_api_create_update_and_reload(
                     "boundary": boundary,
                 }
             ],
+            "markers": [
+                {
+                    "id": "gate-1",
+                    "name": "Main gate",
+                    "category": "Gate",
+                    "notes": "Vehicle entrance",
+                    "position": {"latitude": -1.03, "longitude": 36.04},
+                }
+            ],
         },
     )
     assert created.status_code == 201
@@ -142,6 +151,15 @@ def test_project_api_create_update_and_reload(
                     "boundary": boundary,
                 }
             ],
+            "markers": [
+                {
+                    "id": "store-1",
+                    "name": "Produce store",
+                    "category": "Storage",
+                    "notes": None,
+                    "position": {"latitude": -1.04, "longitude": 36.05},
+                }
+            ],
         },
     )
     assert updated.status_code == 200
@@ -151,6 +169,7 @@ def test_project_api_create_update_and_reload(
     assert reloaded.json()["boundaries"] == [updated_boundary, second_boundary]
     assert reloaded.json()["sections"][0]["name"] == "South field"
     assert reloaded.json()["sections"][0]["activity"] == "Drip-irrigated vegetables"
+    assert reloaded.json()["markers"][0]["name"] == "Produce store"
 
     authenticated_as("user-b")
     assert client.get("/api/v1/projects").json() == []
@@ -163,6 +182,7 @@ def test_project_api_create_update_and_reload(
             "center_longitude": 36.05,
             "boundaries": [updated_boundary, second_boundary],
             "sections": [],
+            "markers": [],
         },
     ).status_code == 404
     app.dependency_overrides.pop(get_current_user, None)

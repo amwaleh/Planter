@@ -330,6 +330,14 @@ class FarmSection(BaseModel):
     boundary: list[Coordinate] = Field(min_length=3)
 
 
+class FarmMarker(BaseModel):
+    id: str = Field(min_length=1, max_length=100)
+    name: str = Field(min_length=1, max_length=100)
+    category: str = Field(min_length=1, max_length=50)
+    notes: str | None = Field(default=None, max_length=300)
+    position: Coordinate
+
+
 class FarmProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     center_latitude: float = Field(
@@ -342,6 +350,7 @@ class FarmProjectCreate(BaseModel):
     )
     boundaries: list[list[Coordinate]] = Field(min_length=1)
     sections: list[FarmSection] = Field(default_factory=list)
+    markers: list[FarmMarker] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod

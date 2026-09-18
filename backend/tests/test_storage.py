@@ -6,6 +6,7 @@ from app.models import (
     Coordinate,
     CropRuleCreate,
     FarmProjectCreate,
+    FarmMarker,
     FarmSection,
 )
 from app import storage
@@ -34,6 +35,15 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
                     boundary=boundary,
                 )
             ],
+            markers=[
+                FarmMarker(
+                    id="water-1",
+                    name="Main borehole",
+                    category="Water",
+                    notes="Solar pump",
+                    position=Coordinate(latitude=-1.03, longitude=36.04),
+                )
+            ],
         )
     )
 
@@ -41,6 +51,7 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
     assert loaded is not None
     assert loaded.name == "Demo farm"
     assert loaded.sections[0].activity == "Planting maize"
+    assert loaded.markers[0].name == "Main borehole"
 
     second_boundary = [
         Coordinate(latitude=-1.2, longitude=36.2),
@@ -66,6 +77,7 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
                     boundary=boundary,
                 )
             ],
+            markers=[],
         ),
     )
     assert updated is not None
@@ -76,6 +88,7 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
     assert len(reloaded.boundaries[0]) == 4
     assert reloaded.sections[0].name == "South plot"
     assert reloaded.sections[0].activity == "Grazing rotation"
+    assert reloaded.markers == []
     assert storage.list_farm_projects("user-b") == []
     assert storage.get_farm_project("user-b", project.id) is None
     assert storage.update_farm_project(
@@ -87,6 +100,7 @@ def test_farm_project_round_trip(tmp_path: Path, monkeypatch) -> None:
             center_longitude=36.05,
             boundaries=[boundary],
             sections=[],
+            markers=[],
         ),
     ) is None
 
@@ -123,6 +137,45 @@ def test_storage_migration_does_not_expose_unowned_projects(
     storage.initialize_storage()
 
     assert storage.list_farm_projects("user-a") == []
+
+
+def test_storage_migration_adds_empty_markers_to_owned_projects(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(storage, "DATABASE_PATH", tmp_path / "planter.db")
+    with storage._connect() as connection:
+        connection.execute(
+            """
+            CREATE TABLE farm_projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                center_latitude REAL NOT NULL,
+                center_longitude REAL NOT NULL,
+                boundary_json TEXT NOT NULL,
+                sections_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                owner_id TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO farm_projects VALUES (
+                'owned-legacy', 'Owned legacy farm', -1, 36,
+                '[[{"latitude": -1, "longitude": 36}, {"latitude": -1, "longitude": 36.1}, {"latitude": -1.1, "longitude": 36.1}]]',
+                '[]', '2025-01-01T00:00:00+00:00',
+                '2025-01-01T00:00:00+00:00', 'user-a'
+            )
+            """
+        )
+
+    storage.initialize_storage()
+
+    project = storage.get_farm_project("user-a", "owned-legacy")
+    assert project is not None
+    assert project.markers == []
 
 
 def test_legacy_single_boundary_payload_is_migrated() -> None:

@@ -34,6 +34,7 @@ def initialize_storage() -> None:
                 center_longitude REAL NOT NULL,
                 boundary_json TEXT NOT NULL,
                 sections_json TEXT NOT NULL,
+                markers_json TEXT NOT NULL DEFAULT '[]',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 owner_id TEXT
@@ -46,6 +47,10 @@ def initialize_storage() -> None:
         }
         if "owner_id" not in columns:
             connection.execute("ALTER TABLE farm_projects ADD COLUMN owner_id TEXT")
+        if "markers_json" not in columns:
+            connection.execute(
+                "ALTER TABLE farm_projects ADD COLUMN markers_json TEXT NOT NULL DEFAULT '[]'"
+            )
         connection.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_farm_projects_owner_updated
@@ -120,8 +125,9 @@ def save_farm_project(owner_id: str, payload: FarmProjectCreate) -> FarmProject:
             """
             INSERT INTO farm_projects (
                 id, name, center_latitude, center_longitude,
-                boundary_json, sections_json, created_at, updated_at, owner_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                boundary_json, sections_json, markers_json,
+                created_at, updated_at, owner_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 project.id,
@@ -135,6 +141,7 @@ def save_farm_project(owner_id: str, payload: FarmProjectCreate) -> FarmProject:
                     ]
                 ),
                 json.dumps([section.model_dump() for section in project.sections]),
+                json.dumps([marker.model_dump() for marker in project.markers]),
                 project.created_at.isoformat(),
                 project.updated_at.isoformat(),
                 owner_id,
@@ -165,7 +172,7 @@ def update_farm_project(
             """
             UPDATE farm_projects
             SET name = ?, center_latitude = ?, center_longitude = ?,
-                boundary_json = ?, sections_json = ?, updated_at = ?
+                boundary_json = ?, sections_json = ?, markers_json = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
             """,
             (
@@ -179,6 +186,7 @@ def update_farm_project(
                     ]
                 ),
                 json.dumps([section.model_dump() for section in project.sections]),
+                json.dumps([marker.model_dump() for marker in project.markers]),
                 project.updated_at.isoformat(),
                 project.id,
                 owner_id,
@@ -220,6 +228,7 @@ def _project_from_row(row: sqlite3.Row) -> FarmProject:
         center_longitude=row["center_longitude"],
         boundaries=stored_boundaries,
         sections=json.loads(row["sections_json"]),
+        markers=json.loads(row["markers_json"]),
         created_at=datetime.fromisoformat(row["created_at"]),
         updated_at=datetime.fromisoformat(row["updated_at"]),
     )

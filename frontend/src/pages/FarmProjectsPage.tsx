@@ -39,6 +39,7 @@ import { SiteFooter, SiteHeader } from "../components/SiteChrome";
 import projectIconUrl from "../assets/planter-project-icon.png";
 import type {
   Coordinate,
+  FarmMarker,
   FarmProject,
   FarmSection,
   LocationMatch,
@@ -56,12 +57,39 @@ interface ParcelFocusRequest {
   index: number;
 }
 
+const markerSymbols: Record<string, string> = {
+  Water: "W",
+  Gate: "G",
+  Building: "B",
+  Storage: "S",
+  Livestock: "L",
+  Equipment: "E",
+  Hazard: "!",
+  Other: "•",
+};
+
 const projectMarkerIcon = L.divIcon({
   className: "project-marker",
   html: `<img src="${projectIconUrl}" alt="" aria-hidden="true" />`,
   iconSize: [44, 44],
   iconAnchor: [22, 42],
 });
+
+function customMarkerIcon(category: string) {
+  const symbol = markerSymbols[category] ?? markerSymbols.Other;
+  return L.divIcon({
+    className: "custom-farm-marker",
+    html: `<span>${symbol}</span>`,
+    iconSize: [34, 42],
+    iconAnchor: [17, 40],
+    popupAnchor: [0, -36],
+  });
+}
+
+function createMarkerId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `marker-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 function coordinatesFromLayer(layer: L.Layer): Coordinate[] {
   if (!(layer instanceof L.Polygon)) return [];
@@ -231,16 +259,21 @@ function ProjectMap({
   boundaries,
   sectionDraft,
   sections,
+  editingSectionIndex,
+  markers,
   projectName,
   fitRequest,
   centerFocusRequest,
   parcelFocusRequest,
   locationMode,
+  markerPlacement,
   drawRequest,
   cancelRequest,
   resetEditRequest,
   geometryKey,
   onCenterChange,
+  onMarkerPlaced,
+  onMarkerChange,
   onShapeCreated,
   onDrawEnded,
   onBoundaryChange,
@@ -251,22 +284,28 @@ function ProjectMap({
   boundaries: Coordinate[][];
   sectionDraft: Coordinate[];
   sections: FarmSection[];
+  editingSectionIndex: number | null;
+  markers: FarmMarker[];
   projectName: string;
   fitRequest: number;
   centerFocusRequest: number;
   parcelFocusRequest: ParcelFocusRequest | null;
   locationMode: boolean;
+  markerPlacement: boolean;
   drawRequest: DrawRequest | null;
   cancelRequest: number;
   resetEditRequest: number;
   geometryKey: string;
   onCenterChange: (latitude: number, longitude: number) => void;
+  onMarkerPlaced: (position: Coordinate) => void;
+  onMarkerChange: (index: number, position: Coordinate) => void;
   onShapeCreated: (kind: DrawKind, points: Coordinate[]) => void;
   onDrawEnded: () => void;
   onBoundaryChange: (index: number, points: Coordinate[]) => void;
   onSectionChange: (index: number, points: Coordinate[]) => void;
 }) {
   const map = useMap();
+  const handledFitRequest = useRef(0);
   const positions = (points: Coordinate[]) =>
     points.map((point) => [point.latitude, point.longitude] as [number, number]);
 
@@ -280,19 +319,24 @@ function ProjectMap({
   }, [centerFocusRequest, latitude, longitude, map]);
 
   useEffect(() => {
-    if (fitRequest === 0) return;
+    if (fitRequest === 0 || handledFitRequest.current === fitRequest) return;
+    handledFitRequest.current = fitRequest;
     const points = [
       [latitude, longitude] as [number, number],
       ...boundaries.flatMap(positions),
       ...positions(sectionDraft),
       ...sections.flatMap((section) => positions(section.boundary)),
+      ...markers.map((marker) => [
+        marker.position.latitude,
+        marker.position.longitude,
+      ] as [number, number]),
     ];
     if (points.length === 1) {
       map.setView(points[0], 17);
     } else {
       map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 18 });
     }
-  }, [boundaries, fitRequest, latitude, longitude, map, sectionDraft, sections]);
+  }, [boundaries, fitRequest, latitude, longitude, map, markers, sectionDraft, sections]);
 
   useEffect(() => {
     if (!parcelFocusRequest) return;
@@ -306,6 +350,13 @@ function ProjectMap({
 
   useMapEvents({
     click(event) {
+      if (markerPlacement && !drawRequest) {
+        onMarkerPlaced({
+          latitude: event.latlng.lat,
+          longitude: event.latlng.lng,
+        });
+        return;
+      }
       if (locationMode && !drawRequest) {
         onCenterChange(event.latlng.lat, event.latlng.lng);
       }
@@ -437,9 +488,9 @@ function ProjectMap({
           <FeatureGroup>
             {boundaries.map((boundary, index) => (
               <Polygon
-                key={`farm-${geometryKey}-${index}`}
+                key={`farm-${geometryKey}-${index}-${drawRequest ? "drawing" : markerPlacement ? "placing" : "idle"}`}
                 positions={positions(boundary)}
-                interactive={!drawRequest}
+                interactive={!drawRequest && !markerPlacement}
                 pathOptions={{ color: "#ffd34d", weight: 4, fillColor: "#173f2a", fillOpacity: 0.2 }}
                 eventHandlers={{
                   "pm:edit": (event) => onBoundaryChange(index, coordinatesFromLayer(event.layer)),
@@ -454,11 +505,11 @@ function ProjectMap({
         </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Farm sections">
           <FeatureGroup>
-            {sections.map((section, index) => (
+            {sections.map((section, index) => editingSectionIndex === index ? null : (
               <Polygon
-                key={`${geometryKey}-${section.name}-${index}`}
+                key={`${geometryKey}-${section.name}-${index}-${drawRequest ? "drawing" : markerPlacement ? "placing" : "idle"}`}
                 positions={positions(section.boundary)}
-                interactive={!drawRequest}
+                interactive={!drawRequest && !markerPlacement}
                 pathOptions={{
                   color: index % 2 === 0 ? "#e8b449" : "#72523f",
                   fillOpacity: 0.28,
@@ -495,6 +546,36 @@ function ProjectMap({
             )}
           </FeatureGroup>
         </LayersControl.Overlay>
+        <LayersControl.Overlay checked name="Custom markers">
+          <FeatureGroup>
+            {markers.map((marker, index) => (
+              <Marker
+                key={marker.id}
+                position={[marker.position.latitude, marker.position.longitude]}
+                icon={customMarkerIcon(marker.category)}
+                draggable={!drawRequest && !markerPlacement}
+                eventHandlers={{
+                  dragend(event) {
+                    const point = event.target.getLatLng();
+                    onMarkerChange(index, {
+                      latitude: point.lat,
+                      longitude: point.lng,
+                    });
+                  },
+                }}
+              >
+                <Tooltip>{marker.name}</Tooltip>
+                <Popup minWidth={220}>
+                  <div className="custom-marker-popup">
+                    <span>{marker.category}</span>
+                    <strong>{marker.name}</strong>
+                    {marker.notes && <p>{marker.notes}</p>}
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </FeatureGroup>
+        </LayersControl.Overlay>
       </LayersControl>
     </>
   );
@@ -527,6 +608,12 @@ export default function FarmProjectsPage() {
   const [sectionName, setSectionName] = useState("");
   const [sectionActivity, setSectionActivity] = useState("");
   const [sectionCrop, setSectionCrop] = useState("");
+  const [editingSectionIndex, setEditingSectionIndex] = useState<number | null>(null);
+  const [markers, setMarkers] = useState<FarmMarker[]>([]);
+  const [markerName, setMarkerName] = useState("");
+  const [markerCategory, setMarkerCategory] = useState("Water");
+  const [markerNotes, setMarkerNotes] = useState("");
+  const [markerPlacement, setMarkerPlacement] = useState(false);
   const [cropOptions, setCropOptions] = useState<string[]>([]);
   const [projects, setProjects] = useState<FarmProject[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -624,6 +711,7 @@ export default function FarmProjectsPage() {
       return;
     }
     setLocationMode(false);
+    setMarkerPlacement(false);
     setDrawRequest({ id: Date.now(), kind });
     setMessage(
       `Draw the ${kind === "farm" ? "farm boundary" : "section"} on the map. Tap the first point or press Enter to finish.`,
@@ -644,21 +732,25 @@ export default function FarmProjectsPage() {
       setMessage("The section must be fully inside one farm parcel.");
       return;
     }
-    const nextSections = [
-      ...sections,
-      {
-        name: sectionName.trim(),
-        activity: sectionActivity.trim(),
-        crop: sectionCrop.trim() || null,
-        boundary: sectionDraft,
-      },
-    ];
+    const nextSection = {
+      name: sectionName.trim(),
+      activity: sectionActivity.trim(),
+      crop: sectionCrop.trim() || null,
+      boundary: sectionDraft,
+    };
+    const nextSections =
+      editingSectionIndex === null
+        ? [...sections, nextSection]
+        : sections.map((section, index) =>
+            index === editingSectionIndex ? nextSection : section,
+          );
     const payload = {
       name: projectName.trim(),
       center_latitude: latitude,
       center_longitude: longitude,
       boundaries,
       sections: nextSections,
+      markers,
     };
     try {
       setSaving(true);
@@ -676,7 +768,10 @@ export default function FarmProjectsPage() {
       setSectionName("");
       setSectionActivity("");
       setSectionCrop("");
-      setMessage(`Section added and ${saved.name} saved.`);
+      setEditingSectionIndex(null);
+      setMessage(
+        `Section ${editingSectionIndex === null ? "added" : "updated"} and ${saved.name} saved.`,
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The section could not be saved.");
     } finally {
@@ -700,6 +795,7 @@ export default function FarmProjectsPage() {
       center_longitude: longitude,
       boundaries,
       sections,
+      markers,
     };
     try {
       setSaving(true);
@@ -728,7 +824,10 @@ export default function FarmProjectsPage() {
     setLongitude(project.center_longitude);
     setBoundaries(project.boundaries);
     setSections(project.sections);
+    setMarkers(project.markers ?? []);
     setSectionDraft([]);
+    setEditingSectionIndex(null);
+    setMarkerPlacement(false);
     setDrawRequest(null);
     setLocationMode(false);
     setResetEditRequest((request) => request + 1);
@@ -742,7 +841,10 @@ export default function FarmProjectsPage() {
     setProjectName("");
     setBoundaries([]);
     setSections([]);
+    setMarkers([]);
     setSectionDraft([]);
+    setEditingSectionIndex(null);
+    setMarkerPlacement(false);
     setDrawRequest(null);
     setResetEditRequest((request) => request + 1);
     setMessage("Started a new farm project.");
@@ -762,6 +864,102 @@ export default function FarmProjectsPage() {
         sectionIndex === index ? { ...section, boundary: points } : section,
       ),
     );
+  }, []);
+
+  const editSection = (index: number) => {
+    const section = sections[index];
+    if (!section) return;
+    setEditingSectionIndex(index);
+    setSectionDraft(section.boundary);
+    setSectionName(section.name);
+    setSectionActivity(section.activity);
+    setSectionCrop(section.crop ?? "");
+    setMessage(`Editing ${section.name}. Update its information or redraw its shape.`);
+  };
+
+  const removeSection = (index: number) => {
+    const section = sections[index];
+    if (!section) return;
+    setSections((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    if (editingSectionIndex === index) {
+      setEditingSectionIndex(null);
+      setSectionDraft([]);
+      setSectionName("");
+      setSectionActivity("");
+      setSectionCrop("");
+    } else if (editingSectionIndex !== null && index < editingSectionIndex) {
+      setEditingSectionIndex(editingSectionIndex - 1);
+    }
+    setMessage(`${section.name} removed. Choose Save changes to persist this update.`);
+  };
+
+  const placeMarker = () => {
+    if (!markerName.trim()) {
+      setMessage("Enter a marker name before placing it.");
+      return;
+    }
+    if (!projectName.trim() || boundaries.length === 0) {
+      setMessage("Enter a farm name and draw a farm parcel before adding markers.");
+      return;
+    }
+    setDrawRequest(null);
+    setLocationMode(false);
+    setMarkerPlacement(true);
+    setMessage(`Tap the map to place ${markerName.trim()}.`);
+  };
+
+  const finishMarkerPlacement = async (position: Coordinate) => {
+    if (saving || !markerPlacement) return;
+    setMarkerPlacement(false);
+    try {
+      if (sections.some((section) => !sectionIsInsideFarm(section.boundary, boundaries))) {
+        setMessage("Every section must remain fully inside one farm parcel before adding a marker.");
+        return;
+      }
+      const marker: FarmMarker = {
+        id: createMarkerId(),
+        name: markerName.trim(),
+        category: markerCategory,
+        notes: markerNotes.trim() || null,
+        position,
+      };
+      const nextMarkers = [...markers, marker];
+      const payload = {
+        name: projectName.trim(),
+        center_latitude: latitude,
+        center_longitude: longitude,
+        boundaries,
+        sections,
+        markers: nextMarkers,
+      };
+      setSaving(true);
+      const accessToken = await getAccessToken();
+      const saved = activeProjectId
+        ? await updateProject(activeProjectId, payload, accessToken)
+        : await createProject(payload, accessToken);
+      setActiveProjectId(saved.id);
+      setMarkers(saved.markers ?? []);
+      setProjects((current) => {
+        const remaining = current.filter((project) => project.id !== saved.id);
+        return [saved, ...remaining];
+      });
+      setMarkerName("");
+      setMarkerNotes("");
+      setMessage(`${marker.name} added and ${saved.name} saved.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The marker could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateMarkerPosition = useCallback((index: number, position: Coordinate) => {
+    setMarkers((current) =>
+      current.map((marker, markerIndex) =>
+        markerIndex === index ? { ...marker, position } : marker,
+      ),
+    );
+    setMessage("Marker moved. Choose Save changes to persist its new position.");
   }, []);
 
   const submitAuthentication = async (event: React.FormEvent) => {
@@ -886,16 +1084,21 @@ export default function FarmProjectsPage() {
                 boundaries={boundaries}
                 sectionDraft={sectionDraft}
                 sections={sections}
+                editingSectionIndex={editingSectionIndex}
+                markers={markers}
                 projectName={projectName}
                 fitRequest={fitRequest}
                 centerFocusRequest={centerFocusRequest}
                 parcelFocusRequest={parcelFocusRequest}
                 locationMode={locationMode}
+                markerPlacement={markerPlacement}
                 drawRequest={drawRequest}
                 cancelRequest={cancelRequest}
                 resetEditRequest={resetEditRequest}
                 geometryKey={activeProjectId ?? "new"}
                 onCenterChange={setCenter}
+                onMarkerPlaced={(position) => void finishMarkerPlacement(position)}
+                onMarkerChange={updateMarkerPosition}
                 onShapeCreated={finishDrawing}
                 onDrawEnded={endDrawing}
                 onBoundaryChange={updateFarmBoundary}
@@ -936,6 +1139,7 @@ export default function FarmProjectsPage() {
                 type="button"
                 onClick={() => {
                   setDrawRequest(null);
+                  setMarkerPlacement(false);
                   setLocationMode(true);
                   setCenterFocusRequest((request) => request + 1);
                   setMessage("The map is focused on the centre. Tap to move it, or drag the marker.");
@@ -954,6 +1158,11 @@ export default function FarmProjectsPage() {
                   <X size={16} /> Cancel drawing
                 </button>
               )}
+              {markerPlacement && (
+                <button type="button" onClick={() => setMarkerPlacement(false)}>
+                  <X size={16} /> Cancel marker
+                </button>
+              )}
               <button type="button" onClick={() => setFitRequest((request) => request + 1)}>
                 <Focus size={16} /> View all
               </button>
@@ -969,7 +1178,8 @@ export default function FarmProjectsPage() {
               <Save size={24} />
             </div>
             <div className="project-form">
-              <label>Project name<input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="e.g. Mwangaza Farm" /></label>
+              <h3>Farm information</h3>
+              <label>Farm name<input value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="e.g. Mwangaza Farm" /></label>
               <div className="boundary-summary">
                 <span>{boundaries.length > 0 ? `${boundaries.length} farm parcel${boundaries.length === 1 ? "" : "s"} captured` : "No farm parcels yet"}</span>
               </div>
@@ -1009,7 +1219,7 @@ export default function FarmProjectsPage() {
                 );
               })}
               <div className="section-editor">
-                <h3>Add a farm section</h3>
+                <h3>{editingSectionIndex === null ? "Add a farm section" : "Edit farm section"}</h3>
                 {sectionDraft.length < 3 ? (
                   <button className="secondary-button" type="button" onClick={() => startDrawing("section")} disabled={boundaries.length === 0}>
                     <SquareDashed size={16} /> Draw section shape
@@ -1022,11 +1232,70 @@ export default function FarmProjectsPage() {
                 <label>Crop or use<input list="project-crops" value={sectionCrop} onChange={(event) => setSectionCrop(event.target.value)} placeholder="e.g. pineapple or pasture" /></label>
                 <datalist id="project-crops">{cropOptions.map((crop) => <option key={crop} value={crop} />)}</datalist>
                 <div className="form-actions">
+                  {editingSectionIndex !== null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSectionIndex(null);
+                        setSectionDraft([]);
+                        setSectionName("");
+                        setSectionActivity("");
+                        setSectionCrop("");
+                      }}
+                    >
+                      Cancel edit
+                    </button>
+                  )}
                   {sectionDraft.length >= 3 && <button type="button" onClick={() => setSectionDraft([])}>Redraw</button>}
                   <button type="button" onClick={() => void addSection()} disabled={sectionDraft.length < 3 || saving}>
-                    {saving ? "Saving..." : "Add section"}
+                    {saving ? "Saving..." : editingSectionIndex === null ? "Add section" : "Save section"}
                   </button>
                 </div>
+              </div>
+              <div className="marker-editor">
+                <h3>Add a custom map marker</h3>
+                <label>
+                  Marker type
+                  <select value={markerCategory} onChange={(event) => setMarkerCategory(event.target.value)}>
+                    {Object.keys(markerSymbols).map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Marker name
+                  <input maxLength={100} value={markerName} onChange={(event) => setMarkerName(event.target.value)} placeholder="e.g. Main borehole" />
+                </label>
+                <label>
+                  Notes
+                  <textarea maxLength={300} value={markerNotes} onChange={(event) => setMarkerNotes(event.target.value)} placeholder="Optional marker details" rows={2} />
+                </label>
+                <button className={markerPlacement ? "secondary-button active" : "secondary-button"} type="button" onClick={placeMarker} disabled={saving}>
+                  <MapPin size={16} /> {markerPlacement ? "Tap map to place" : "Place marker on map"}
+                </button>
+                {markers.length > 0 && (
+                  <div className="marker-list">
+                    {markers.map((marker, index) => (
+                      <article key={marker.id}>
+                        <span className="marker-list-symbol">{markerSymbols[marker.category] ?? markerSymbols.Other}</span>
+                        <div>
+                          <strong>{marker.name}</strong>
+                          <small>{marker.category}{marker.notes ? ` · ${marker.notes}` : ""}</small>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${marker.name}`}
+                          onClick={() => {
+                            setMarkers((current) => current.filter((_, markerIndex) => markerIndex !== index));
+                            setMessage("Marker removed. Choose Save changes to persist this update.");
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="form-actions">
                 <button type="button" onClick={newProject} disabled={saving}>New project</button>
@@ -1048,7 +1317,9 @@ export default function FarmProjectsPage() {
                   <img src={projectIconUrl} alt="" aria-hidden="true" />
                   <strong>{project.name}</strong>
                 </span>
-                <span>{project.boundaries.length} parcels · {project.sections.length} sections</span>
+                <span>
+                  {project.boundaries.length} parcels · {project.sections.length} sections · {(project.markers ?? []).length} markers
+                </span>
                 <small>Updated {new Date(project.updated_at).toLocaleString()}</small>
               </button>
             ))}
@@ -1063,7 +1334,10 @@ export default function FarmProjectsPage() {
                     <span>{section.activity}</span>
                     {section.crop && <small>{section.crop}</small>}
                   </div>
-                  <button type="button" aria-label={`Remove ${section.name}`} onClick={() => setSections((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                  <button className="section-edit-button" type="button" aria-label={`Edit ${section.name}`} onClick={() => editSection(index)}>
+                    <Pencil size={16} />
+                  </button>
+                  <button type="button" aria-label={`Remove ${section.name}`} onClick={() => removeSection(index)}>
                     <Trash2 size={16} />
                   </button>
                 </article>

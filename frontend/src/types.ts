@@ -182,12 +182,21 @@ export interface FarmSection {
   boundary: Coordinate[];
 }
 
+export interface FarmMarker {
+  id: string;
+  name: string;
+  category: string;
+  notes: string | null;
+  position: Coordinate;
+}
+
 export interface FarmProjectInput {
   name: string;
   center_latitude: number;
   center_longitude: number;
   boundaries: Coordinate[][];
   sections: FarmSection[];
+  markers: FarmMarker[];
 }
 
 export interface FarmProject extends FarmProjectInput {
