@@ -802,6 +802,7 @@ export default function FarmProjectsPage() {
                 onClick={() => {
                   setDrawRequest(null);
                   setLocationMode(true);
+                  setFitRequest((request) => request + 1);
                   setMessage("Tap the map to move the farm centre, or drag the marker.");
                 }}
               >
