@@ -203,6 +203,7 @@ function ProjectMap({
   sections,
   projectName,
   fitRequest,
+  centerFocusRequest,
   locationMode,
   drawRequest,
   cancelRequest,
@@ -221,6 +222,7 @@ function ProjectMap({
   sections: FarmSection[];
   projectName: string;
   fitRequest: number;
+  centerFocusRequest: number;
   locationMode: boolean;
   drawRequest: DrawRequest | null;
   cancelRequest: number;
@@ -239,6 +241,11 @@ function ProjectMap({
   useEffect(() => {
     map.setView([latitude, longitude], map.getZoom());
   }, [latitude, longitude, map]);
+
+  useEffect(() => {
+    if (centerFocusRequest === 0) return;
+    map.flyTo([latitude, longitude], 18, { duration: 0.45 });
+  }, [centerFocusRequest, latitude, longitude, map]);
 
   useEffect(() => {
     if (fitRequest === 0) return;
@@ -430,6 +437,7 @@ export default function FarmProjectsPage() {
   const [projects, setProjects] = useState<FarmProject[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [fitRequest, setFitRequest] = useState(0);
+  const [centerFocusRequest, setCenterFocusRequest] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [placeQuery, setPlaceQuery] = useState("");
@@ -458,6 +466,7 @@ export default function FarmProjectsPage() {
     setLatitude(nextLatitude);
     setLongitude(nextLongitude);
     setLocationMode(false);
+    setCenterFocusRequest((request) => request + 1);
     setMessage("Farm centre updated.");
   }, []);
 
@@ -755,6 +764,7 @@ export default function FarmProjectsPage() {
                 sections={sections}
                 projectName={projectName}
                 fitRequest={fitRequest}
+                centerFocusRequest={centerFocusRequest}
                 locationMode={locationMode}
                 drawRequest={drawRequest}
                 cancelRequest={cancelRequest}
@@ -802,8 +812,8 @@ export default function FarmProjectsPage() {
                 onClick={() => {
                   setDrawRequest(null);
                   setLocationMode(true);
-                  setFitRequest((request) => request + 1);
-                  setMessage("Tap the map to move the farm centre, or drag the marker.");
+                  setCenterFocusRequest((request) => request + 1);
+                  setMessage("The map is focused on the centre. Tap to move it, or drag the marker.");
                 }}
               >
                 <MapPin size={16} /> Move centre
